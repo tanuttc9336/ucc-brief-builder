@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Undercat — Free Creative Brief Builder (v4.2)</title>
+<style>
+  :root{
+    --bg:#0b0b12; --text:#f7f7fc; --muted:#c1c5d9;
+    --accent:#6d28d9; --accent-2:#7c3aed; --accent-3:#8b5cf6;
+    --gold:#f5c542;
+    --surface:#0f111a; --surface-2:#151826; --border:rgba(255,255,255,.22);
+    --chip-bg:rgba(255,255,255,.07); --chip-text:#e7e9f6; --chip-border:rgba(255,255,255,.28);
+    --chip-sel-bg:rgba(109,40,217,.28); --chip-sel-text:#ffffff; --chip-sel-border:rgba(124,58,237,.85);
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    background: radial-gradient(1200px 800px at 80% -20%, rgba(91,33,182,.18), transparent 55%),
+               radial-gradient(800px 600px at 0% 100%, rgba(91,33,182,.10), transparent 60%),
+               var(--bg); color:var(--text)}
+  a{color:var(--accent)}
+  .app{max-width:1150px; margin:0 auto; padding:24px}
+  header{display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .title{font-weight:800}
+  .subtitle{color:var(--muted)}
+  .btn{background:linear-gradient(180deg, rgba(91,33,182,.18), rgba(91,33,182,.10)); border:1px solid var(--chip-border);
+    padding:10px 14px; border-radius:12px; color:var(--text); cursor:pointer; transition:.2s; display:inline-flex; align-items:center; gap:8px}
+  .btn:hover{transform:translateY(-1px); box-shadow:0 10px 24px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.07)}
+  .btn.primary{background:linear-gradient(180deg, rgba(109,40,217,.40), rgba(109,40,217,.18)); border-color:var(--chip-sel-border)}
+  .btn.ghost{background:transparent; border-color:var(--border)}
+  .btn:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  .card{border:1px solid var(--border); border-radius:16px; background:var(--surface); box-shadow:0 8px 24px rgba(0,0,0,.28)}
+  .scene{padding:16px}
+  .progress{height:14px; background:var(--surface-2); border:1px solid var(--border); border-radius:999px; position:relative; overflow:hidden}
+  .progress .bar{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3)); box-shadow:0 0 18px rgba(91,33,182,.35)}
+  .progress .lvl{position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:.85rem; color:var(--muted)}
+  .flow{padding:16px; display:grid; gap:16px}
+  .step{display:none; animation:fade .2s ease} .step.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
+  .q{font-size:1.1rem; margin:0 0 10px}
+  .options{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:12px}
+  .opt{border:1px solid var(--border); background:var(--surface); padding:14px; border-radius:14px; cursor:pointer; display:flex; gap:10px; position:relative}
+  .opt:hover{border-color:var(--chip-sel-border); box-shadow:0 6px 16px rgba(0,0,0,.22)}
+  .opt.selected{outline:2px solid var(--accent); background:linear-gradient(180deg, var(--chip-sel-bg), rgba(109,40,217,.08))}
+  .emo{font-size:1.4rem}
+  .muted{color:var(--muted)}
+  .inputs{display:flex; flex-direction:column; gap:10px}
+  input, textarea, select{background:var(--surface-2); color:var(--text); border:1px solid var(--border); border-radius:12px; padding:10px}
+  input:focus-visible, textarea:focus-visible, select:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+  textarea{min-height:96px}
+  .row{display:flex; gap:8px; flex-wrap:wrap}
+  .chip{border:1px solid var(--chip-border); border-radius:999px; padding:6px 9px; color:var(--chip-text); background:var(--chip-bg); cursor:default; font-size:.86rem}
+  .chip.sel{background:var(--chip-sel-bg); color:var(--chip-sel-text); border-color:var(--chip-sel-border); outline:2px solid var(--chip-sel-border)}
+  .chip.badge{font-size:.8rem; padding:6px 8px; color:var(--chip-text); background:var(--chip-bg)}
+  .impact{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .nav{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px; border-top:1px solid rgba(255,255,255,.1)}
+  .scroll{background:linear-gradient(180deg, rgba(245,197,66,.1), rgba(245,197,66,.03)); border:1px dashed rgba(245,197,66,.6); border-radius:14px; padding:16px}
+  .kv{display:grid; grid-template-columns:220px 1fr; gap:10px; margin:6px 0}
+  .toast{position:fixed; right:16px; bottom:16px; background:#11131a; border:1px solid rgba(255,255,255,.2); padding:10px 12px; border-radius:12px; opacity:0; transform:translateY(10px); transition:.2s}
+  .toast.show{opacity:1; transform:translateY(0)}
+  .rail .cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:12px}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:16px}
+  .modal .box{background:#12131a; border:1px solid rgba(255,255,255,.2); border-radius:16px; padding:16px; width:min(680px,96vw)}
+  /* mood classes */
+  /* --- Redesigned Step 1 + theme light overrides --- */
+  .theme-light{
+    --bg:#f6f7fb; --text:#0c0f18; --muted:#4c5163;
+    --accent:#6d28d9; --accent-2:#7c3aed; --accent-3:#8b5cf6; --gold:#b98500;
+    --surface:#ffffff; --surface-2:#f2f3f8; --border:rgba(0,0,0,.14);
+    --chip-bg:rgba(0,0,0,.06); --chip-text:#1a1d29; --chip-border:rgba(0,0,0,.22);
+    --chip-sel-bg:rgba(109,40,217,.18); --chip-sel-text:#0c0f18; --chip-sel-border:rgba(109,40,217,.55);
+  }
+  .vibe-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px}
+  .opt.modern{position:relative; overflow:hidden; padding:0; border-radius:16px; cursor:pointer;
+    border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03);
+    box-shadow:0 8px 20px rgba(0,0,0,.30); transition:.18s transform, .18s border-color, .18s box-shadow}
+  .theme-light .opt.modern{border-color:var(--border); background:var(--surface); box-shadow:0 6px 16px rgba(0,0,0,.08)}
+  .opt.modern:hover{transform:translateY(-2px); border-color:rgba(91,33,182,.55)}
+  .opt.modern.selected{outline:2px solid var(--accent); box-shadow:0 0 0 4px rgba(91,33,182,.18) inset}
+  .opt.modern .preview{height:120px; width:100%}
+  .opt.modern .content{display:flex; align-items:center; gap:10px; padding:12px 14px}
+  .preview.vibe-fun{background:linear-gradient(135deg, rgba(255,184,28,.55), rgba(255,77,109,.45))}
+  .preview.vibe-pro{background:linear-gradient(135deg, rgba(59,130,246,.55), rgba(14,165,233,.45))}
+  .preview.vibe-myst{background:linear-gradient(135deg, rgba(91,33,182,.65), rgba(124,58,237,.45))}
+  .preview.vibe-calm{background:linear-gradient(135deg, rgba(16,185,129,.45), rgba(34,197,94,.35))}
+  .title-sm{font-weight:700}
+  body.mood-fun{background:
+    radial-gradient(1200px 800px at 80% -20%, rgba(255,184,28,.16), transparent 55%),
+    radial-gradient(800px 600px at 0% 100%, rgba(255,77,109,.12), transparent 60%),
+    var(--bg)}
+  body.mood-pro{background:
+    radial-gradient(1200px 800px at 80% -20%, rgba(59,130,246,.16), transparent 55%),
+    radial-gradient(800px 600px at 0% 100%, rgba(14,165,233,.12), transparent 60%),
+    var(--bg)}
+  body.mood-myst{background:
+    radial-gradient(1200px 800px at 80% -20%, rgba(91,33,182,.22), transparent 55%),
+    radial-gradient(800px 600px at 0% 100%, rgba(124,58,237,.12), transparent 60%),
+    var(--bg)}
+  body.mood-calm{background:
+    radial-gradient(1200px 800px at 80% -20%, rgba(16,185,129,.14), transparent 55%),
+    radial-gradient(800px 600px at 0% 100%, rgba(34,197,94,.10), transparent 60%),
+    var(--bg)}
+
+  /* --- Stepper nav (clickable) --- */
+  .stepper{display:flex; gap:8px; padding:10px 16px 2px; overflow:auto}
+  .stepper .stp{flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+    border:1px solid var(--border); color:var(--muted); background:var(--surface-2); cursor:pointer; font-size:.9rem}
+  .stepper .stp .num{width:22px; height:22px; display:grid; place-items:center; border-radius:999px; background:var(--chip-bg); color:var(--text); font-weight:700; font-size:.8rem}
+  .stepper .stp.active{color:var(--text); border-color:var(--accent);
+    background:linear-gradient(180deg, var(--chip-sel-bg), rgba(109,40,217,.10));
+    box-shadow:0 0 0 2px var(--accent) inset}
+  .stepper .stp.active .num{background:var(--accent); color:#fff; font-weight:800}
+  .stepper::-webkit-scrollbar{height:8px}
+  .stepper::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15); border-radius:10px}
+  .theme-light .stepper .stp{border-color:rgba(0,0,0,.08); background:rgba(255,255,255,.7)}
+  .theme-light .stepper .stp .num{background:rgba(0,0,0,.06); color:#111}
+  .theme-light .stepper .stp.active{border-color:var(--accent); color:var(--text); box-shadow:0 0 0 2px var(--accent) inset}
+
+  /* Buttons focus-visible */
+  /* Accessibility + focus */
+  .opt:focus-visible, .chip:focus-visible, .stp:focus-visible { outline:3px solid var(--accent); outline-offset:2px }
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  /* Light theme: stronger selected state */
+  .theme-light .opt.selected{ border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset, 0 6px 14px rgba(0,0,0,.06) }
+  .theme-light .chip.sel{ box-shadow: 0 0 0 2px var(--chip-sel-border) inset }
+  /* Education helpers */
+  .edu{border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.03); margin:8px 0}
+  .edu .why{font-weight:700}
+  .edu .pro{font-style:italic}
+  .edu ul{margin:6px 0 0 18px; padding:0}
+  .gloss{border-bottom:1px dotted var(--muted); cursor:help}
+  .popnote{font-size:.9rem; color:var(--muted)}
+.deep{border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--surface); margin:8px 0; display:none}
+.deep .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px}
+.metric-card{border:1px solid var(--border); border-radius:12px; padding:10px; background:var(--surface-2)}
+.metric-card .name{font-weight:700}
+.metric-card .muted{font-size:.9rem}
+  /* Clarity score */
+  .clarity{display:flex; align-items:center; gap:10px; margin-top:8px}
+  .clarity .score{font-weight:800}
+  .clarity .meter{flex:1; height:10px; background:var(--surface-2); border:1px solid var(--border); border-radius:999px; overflow:hidden}
+  .clarity .fill{height:100%; width:0%; background:linear-gradient(90deg, #ef4444, #f59e0b, #10b981)}
+  /* Education helpers */
+  .edu{border:1px dashed var(--border); border-radius:12px; padding:10px; background:rgba(255,255,255,.03); margin:8px 0}
+  .edu .why{font-weight:700}
+  .edu .pro{font-style:italic}
+  .edu ul{margin:6px 0 0 18px; padding:0}
+  .gloss{border-bottom:1px dotted var(--muted); cursor:help}
+  .popnote{font-size:.9rem; color:var(--muted)}
+</style>
+</head>
+<body class="mood-myst">
+<div class="app">
+  <div id="a11yLive" class="sr-only" aria-live="polite"></div>
+  <header>
+    <div>
+      <div class="title">Free Creative Brief Builder — Undercat</div>
+      <div class="subtitle">Playful, fast, non-salesy. Export and share with your team.</div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn ghost" id="themeToggle" title="Toggle theme">🌙 Dark</button>
+      <button type="button" class="btn ghost" id="resetBtn">Reset</button>
+      <button type="button" class="btn" id="saveBtn">Save</button>
+      <button type="button" class="btn primary" id="resumeBtn">Resume</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="scene">
+      <div class="progress" role="progressbar" aria-label="Progress" aria-valuemin="1" aria-valuemax="9" aria-valuenow="1"><div class="bar" id="bar"></div><div class="lvl" id="lvl">Level 1/9</div></div>
+      <div class="clarity" id="clarityWrap" aria-live="polite">
+        <div class="score" id="clarityScore">Clarity — 0/100</div>
+        <div class="meter"><div class="fill" id="clarityFill"></div></div>
+        <button type="button" class="btn ghost" id="clarityDetails" title="Show what's missing">Why?</button>
+      </div>
+      <div class="popnote" id="clarityMissing" style="display:none"></div>
+    </div>
+    <nav class="stepper" id="stepperNav"></nav>
+
+    <div class="flow" id="flow">
+      <section class="step active" data-step="1">
+        <h3 class="q">Step 1 — Pick the vibe</h3>
+        <div class="muted" style="margin:-2px 0 10px">We’ll tailor examples and tone based on your selection.</div>
+        <div class="vibe-grid" id="vibeOptions">
+          <div class="opt modern" data-value="Fun & Playful" data-mood="mood-fun">
+            <div class="preview vibe-fun"></div>
+            <div class="content"><div class="emo">🎉</div><div><div class="title-sm">Fun & Playful</div><div class="muted">Bounce, color, cheeky transitions.</div></div></div>
+          </div>
+          <div class="opt modern" data-value="Professional" data-mood="mood-pro">
+            <div class="preview vibe-pro"></div>
+            <div class="content"><div class="emo">🕴️</div><div><div class="title-sm">Professional</div><div class="muted">Crisp, clean, confident.</div></div></div>
+          </div>
+          <div class="opt modern" data-value="Mysterious & Dramatic" data-mood="mood-myst">
+            <div class="preview vibe-myst"></div>
+            <div class="content"><div class="emo">🌌</div><div><div class="title-sm">Mysterious & Dramatic</div><div class="muted">Shadows, contrast, slow reveal.</div></div></div>
+          </div>
+          <div class="opt modern" data-value="Calm & Natural" data-mood="mood-calm">
+            <div class="preview vibe-calm"></div>
+            <div class="content"><div class="emo">🌿</div><div><div class="title-sm">Calm & Natural</div><div class="muted">Soft light, space to breathe.</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="step" data-step="2">
+        <h3 class="q">Step 2 — What do you want this to achieve?</h3>
+        <div class="muted" style="margin:-2px 0 10px">Choose the outcome you’ll measure.</div>
+        <div class="options" id="kpiOptions">
+          <div class="opt" data-value="Brand Awareness"><div class="emo">📢</div><div><div class="txt"><strong>Brand Awareness</strong></div><div class="muted">Make them know you.</div></div></div>
+          <div class="opt" data-value="Drive Sales"><div class="emo">💸</div><div><div class="txt"><strong>Drive Sales</strong></div><div class="muted">Make them click & buy.</div></div></div>
+          <div class="opt" data-value="Build Trust"><div class="emo">❤️</div><div><div class="txt"><strong>Build Trust</strong></div><div class="muted">Proof, social, real faces.</div></div></div>
+          <div class="opt" data-value="Launch Hype"><div class="emo">🚀</div><div><div class="txt"><strong>Launch Hype</strong></div><div class="muted">Big moment, big energy.</div></div></div>
+        </div>
+        <div class="popnote" id="kpiHint" style="margin-top:4px; font-size:.85rem">
+          💡 Hint: Every goal links to an audience. Choose the right goal, we’ll zoom into your exact audience in <strong>Step 5</strong>. 👀
+        </div>
+        <button type="button" class="btn ghost" id="edu2Toggle" style="margin-top:6px; display:none">See why</button>
+        <div class="edu" id="edu2" style="display:none"></div>
+        <button type="button" class="btn ghost" id="deep2Toggle" style="margin-top:6px; display:none">Curious? 🤔</button>
+        <div class="deep" id="deep2"></div>
+        <div class="inputs">
+          <label class="muted">Single metric that matters (optional):</label>
+          <select id="smtm">
+            <option value="">Pick one</option>
+            <option>VTR (Watch-through)</option>
+            <option>CTR (Clicks)</option>
+            <option>Leads / CPA</option>
+            <option>Sales / ROAS</option>
+            <option>Shares / Saves</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="step" data-step="3">
+        <h3 class="q">Step 3 — Channel & Action</h3>
+        <div class="muted" style="margin:-2px 0 10px">We’ll shape pacing and aspect for this channel.</div>
+        <div id="combo3" class="popnote" style="font-size:.95rem; font-weight:700; display:none"></div>
+        <div id="nudge3" class="edu"></div>
+        <div class="inputs">
+          <div><div class="muted" style="margin-bottom:6px">Where will this live first?</div><div class="row" id="channelChips"></div></div>
+          <div><div class="muted" style="margin-bottom:6px">What action do you want?</div><div class="row" id="ctaChips"></div></div>
+          <div><div class="muted" style="margin-bottom:6px">Format <span class="muted" style="opacity:.85">(pick 1–2)</span></div><div class="row" id="aspectChips"></div></div>
+        </div>
+        <div class="edu" id="edu3"></div>
+      </section>
+
+      <section class="step" data-step="4">
+        <h3 class="q">Step 4 — Pick a style that inspires you.</h3>
+        <div class="muted" style="margin:-2px 0 10px">Add links—covers appear automatically.</div>
+        <div class="options" id="styleOptions">
+          <div class="opt" data-value="Cinematic"><div class="emo">🎬</div><div><div class="txt"><strong>Cinematic</strong></div><div class="muted">Anamorphic vibes, score, pacing.</div></div></div>
+          <div class="opt" data-value="TikTok Snappy"><div class="emo">📱</div><div><div class="txt"><strong>TikTok Snappy</strong></div><div class="muted">Hooks, jump-cuts, subtitles.</div></div></div>
+          <div class="opt" data-value="Artistic"><div class="emo">🎨</div><div><div class="txt"><strong>Artistic</strong></div><div class="muted">Textures, patterns, visual poetry.</div></div></div>
+          <div class="opt" data-value="Documentary"><div class="emo">📰</div><div><div class="txt"><strong>Documentary</strong></div><div class="muted">Interviews, real stories, context.</div></div></div>
+        </div>
+        <div class="inputs">
+          <label>Reference links (YouTube/Vimeo/Drive):</label>
+          <textarea id="refs" placeholder="Paste 1 link per line"></textarea>
+        </div>
+        <div class="edu" id="edu4"></div>
+        <div class="rail">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px">
+            <h4 style="margin:0">Made in this vibe <span class="muted">— quick peeks, no hype</span></h4>
+            <button type="button" class="btn ghost" id="openFilters">Filter</button>
+          </div>
+          <div class="row" id="railFilterBar" style="display:none; gap:6px; padding:6px 0 6px 0"></div>
+          <div id="filterInline" class="card" style="display:none; padding:12px; margin:8px 0">
+            <div class="inputs">
+              <div>
+                <div class="muted" style="margin-bottom:6px"><strong>Sub-style</strong></div>
+                <div class="row" id="filterSubstyleInline" style="gap:6px"></div>
+              </div>
+              <div>
+                <div class="muted" style="margin-bottom:6px"><strong>Industry</strong></div>
+                <div class="row" id="filterIndustryInline" style="gap:6px"></div>
+              </div>
+              <div class="row" style="justify-content:flex-end; gap:8px">
+                <button type="button" class="btn ghost" id="filterResetInline">Reset</button>
+              </div>
+            </div>
+          </div>
+          <div class="cards" id="railCards"></div>
+          <div class="row" style="justify-content:flex-end; gap:8px">
+            <button type="button" class="btn ghost" id="moreRail">View more</button>
+            <button type="button" class="btn ghost" id="shuffleRail">Shuffle</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="step" data-step="5">
+        <h3 class="q">Step 5 — Who are we talking to?</h3>
+        <div class="muted" style="margin:-2px 0 10px">If custom, add 1 sentence about them.</div>
+        <div class="options" id="audOptions">
+          <div class="opt" data-value="Families"><div class="emo">👩‍👩‍👧</div><div><div class="txt"><strong>Families</strong></div><div class="muted">Warm, safe, value-driven.</div></div></div>
+          <div class="opt" data-value="Business Pros"><div class="emo">👨‍💼</div><div><div class="txt"><strong>Business Pros</strong></div><div class="muted">ROI, efficiency, proof.</div></div></div>
+          <div class="opt" data-value="Gen Z"><div class="emo">🧑‍🎤</div><div><div class="txt"><strong>Gen Z</strong></div><div class="muted">Quick, authentic, remixable.</div></div></div>
+          <div class="opt" data-value="Custom"><div class="emo">🎯</div><div><div class="txt"><strong>Custom</strong></div><div class="muted">Tell us in your words.</div></div></div>
+        </div>
+        <div class="inputs"><input id="audCustom" placeholder="Describe your audience (optional)" />
+        <div class="edu" id="edu5"></div>
+        </div>
+      </section>
+
+      <section class="step" data-step="6">
+        <h3 class="q">Step 6 — How big is your rocket?</h3>
+        <div class="row">
+          <input type="range" id="budget" min="1" max="3" step="1" value="2" />
+          <div class="chip" id="budgetLabel">Medium — Balanced</div>
+          <div class="chip">🏅 Potential badges ahead</div>
+        </div>
+        <div class="inputs">
+          <label class="muted">Launch by (pick a date):</label>
+          <input type="date" id="deadline" />
+        </div>
+        <div class="edu" id="edu6"></div>
+      </section>
+
+      <section class="step" data-step="7">
+        <h3 class="q">Step 7 — Creative “Toppings” (Extras)</h3>
+        <p class="muted">Pick up to <strong>5</strong>. Keep it fun, keep it lean.</p>
+        <div class="options" id="extraOptions"></div>
+        <div class="edu" id="edu7"></div>
+      </section>
+
+      <section class="step" data-step="8">
+        <h3 class="q">Step 8 — Anything we should know?</h3>
+        <div class="inputs"><textarea id="notes" placeholder="Constraints, must-haves, product links, locations, etc. (optional)"></textarea></div>
+        <div class="inputs"><label class="muted">Email to send your project scroll:</label><input id="email" placeholder="you@brand.com (optional)"/></div>
+        <div class="inputs" style="border:1px dashed rgba(255,255,255,.2); border-radius:12px; padding:10px">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <strong>Chef’s notes (optional)</strong><label class="chip"><input type="checkbox" id="advToggle"> Show</label>
+          </div>
+          <div id="advInner" style="display:none; margin-top:8px">
+            <label>Key message (1 line):</label>
+            <input id="keyMsg" placeholder="If they remember one thing, it should be…"/>
+            <div style="margin-top:8px"><div class="muted" style="margin-bottom:6px">Deliverables (multi-select):</div><div class="row" id="deliverableChips"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="step" data-step="9">
+        <h3 class="q">Final — Your Project Scroll</h3>
+        <div class="scroll" id="scroll"></div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="btn" id="copyJson">Copy JSON</button>
+        <button type="button" class="btn" id="downloadJson">Download JSON</button>
+        <button type="button" class="btn" id="shareLink">Share link</button>
+        <button type="button" class="btn primary" id="printPdf">Export as PDF</button>
+      </div>
+        <div class="muted" style="margin-top:8px">Free tool. Build great work faster.</div>
+      </section>
+    </div>
+
+    <div class="nav">
+      <button type="button" class="btn ghost" id="prevBtn">← Back</button>
+      <div class="muted" id="badgeWrap"></div>
+      <button type="button" class="btn primary" id="nextBtn">Next →</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+
+</div>
+  <div class="modal" id="copyModal">
+    <div class="box">
+      <strong>Copy your JSON</strong>
+      <p class="muted">Your browser blocked automatic copy. Select all and copy manually (Ctrl/Cmd+C).</p>
+      <textarea id="copyArea" style="width:100%; height:260px"></textarea>
+      <div class="row" style="justify-content:flex-end; margin-top:10px"><button type="button" class="btn" id="closeCopy">Close</button></div>
+    </div>
+  </div>
+  <div class="modal" id="gateModal">
+    <div class="box">
+      <strong>Send your brief to your email?</strong>
+      <p class="muted">We’ll email you a link to your brief. You can skip this step.</p>
+      <input id="gateEmail" placeholder="you@brand.com" style="width:100%; margin:8px 0" />
+      <div class="row" style="justify-content:flex-end; gap:8px">
+        <button type="button" class="btn ghost" id="gateSkip">Skip</button>
+        <button type="button" class="btn" id="gateSend">Send & continue</button>
+      </div>
+    </div>
+  </div>
+  <div class="muted" style="margin-top:14px; font-size:.9rem">Local-first: your inputs stay in your browser unless you export or share. <span class="muted" style="opacity:.8">PDPA-friendly.</span></div>
+</div>
+
+  <!-- Optional: Supabase config (fill in to enable live data) -->
+  <script>
+    // Set these to enable live portfolio from Supabase. Leave blank to use local assets/data/portfolio.json
+    window.SUPABASE_URL = "https://ubsuhxmyssrtcneaymeu.supabase.co";
+    window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVic3VoeG15c3NydGNuZWF5bWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5NjQ0MjksImV4cCI6MjA3MTU0MDQyOX0.yFfgxvJ-n8AGZHcCTO6kExPj37US2-NG89_kRWU3YZA";
+    window.SUPABASE_TABLE = "portfolio_items";
+  </script>
+  <script type="module">
+    // Lazily create a global supabase client if URL & key are provided
+    const url = window.SUPABASE_URL;
+    const key = window.SUPABASE_ANON_KEY;
+    if (url && key) {
+      try {
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+        window.supabase = createClient(url, key, { auth: { persistSession: false } });
+        console.log('[Brief] Supabase client ready');
+      } catch (e) {
+        console.warn('[Brief] Failed to init Supabase client, fallback to local JSON.', e);
+      }
+    }
+  </script>
+<script>
+  (function(){
+  // --- Step 3 Combo Label (Vibe × KPI) ---
+  const VIBE_SHORT = {
+    'Fun & Playful': 'Playful',
+    'Professional': 'Professional',
+    'Mysterious & Dramatic': 'Dramatic',
+    'Calm & Natural': 'Calm'
+  };
+  const KPI_SHORT = {
+    'Brand Awareness': 'Awareness',
+    'Drive Sales': 'Sales',
+    'Build Trust': 'Trust',
+    'Launch Hype': 'Hype'
+  };
+  const VIBE_EMO = {
+    'Fun & Playful': '🎉',
+    'Professional': '🕴️',
+    'Mysterious & Dramatic': '🌌',
+    'Calm & Natural': '🌿'
+  };
+  const KPI_EMO = {
+    'Brand Awareness': '📢',
+    'Drive Sales': '💸',
+    'Build Trust': '❤️',
+    'Launch Hype': '🚀'
+  };
+  function renderCombo3(){
+    const box = qs('#combo3'); if(!box) return;
+    const v = state.vibe; const k = state.kpi;
+    if(!v || !k){ box.style.display='none'; box.textContent=''; return; }
+    const left = VIBE_SHORT[v] || v;
+    const right = KPI_SHORT[k] || k;
+    const emo = `${VIBE_EMO[v]||''} ${KPI_EMO[k]||''}`.trim();
+    box.textContent = `${emo ? emo + ' ' : ''}${left} ${right}`;
+    box.style.display = 'block';
+  }
+  const toast = (msg)=>{ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1200); };
+  const qs = (sel)=> document.querySelector(sel);
+  const qsa = (sel)=> [...document.querySelectorAll(sel)];
+  const state = {step:1,vibe:'',kpi:'',smtm:'',channel:'',cta:'',style:'',refs:[],audience:'',audCustom:'',budget:2,deadline:'',extras:[],notes:'',email:'',keyMsg:'',deliverables:[],aspects:[],badges:[]};
+  // --- Clarity score ---
+  function computeClarity(s){
+    let score=0; const missing=[];
+    if(s.kpi){ score+=20; } else missing.push('Select a KPI');
+    if(s.smtm){ score+=10; } else missing.push('Set a single metric');
+    if(s.channel){ score+=10; } else missing.push('Pick a primary channel');
+    if(s.audience || s.audCustom){ score+=10; } else missing.push('Specify the audience');
+    if((s.refs||[]).length>=1){ score+=10; } else missing.push('Add ≥1 reference link');
+    if(s.keyMsg){ score+=20; } else missing.push('Add a 1‑line key message');
+    if(s.deadline){ score+=10; } else missing.push('Set a deadline');
+    if((s.deliverables||[]).length>=1){ score+=5; } else missing.push('Select deliverables');
+    if((s.aspects||[]).length>=1){ score+=5; } else missing.push('Pick at least one format');
+    return {score: Math.max(0, Math.min(100, score)), missing};
+  }
+  function updateClarityUI(){
+    const wrap=document.getElementById('clarityWrap');
+    const scoreEl=document.getElementById('clarityScore');
+    const fill=document.getElementById('clarityFill');
+    const miss=document.getElementById('clarityMissing');
+    if(!wrap||!scoreEl||!fill) return;
+    const {score, missing} = computeClarity(state);
+    // Range-based label
+    let label='';
+    if(score < 40) label = 'Fuzzy';
+    else if(score < 70) label = 'Getting clear';
+    else if(score < 90) label = 'Clear';
+    else label = 'Razor‑sharp';
+    // UI text
+    scoreEl.textContent = `Clarity — ${score}/100 (${label})`;
+    fill.style.width = score + '%';
+    if(miss){
+      miss.innerHTML = missing.length ? `Missing: ${missing.slice(0,4).join(' • ')}${missing.length>4?' …':''}` : 'Looks solid ✨';
+    }
+  }
+  // Analytics (minimal)
+  window.dataLayer = window.dataLayer || [];
+  function track(event, params={}){ try{ window.dataLayer.push({event, ...params}); }catch{} console.log('[track]', event, params); }
+  // Progress
+  function setStep(n){
+    const steps = qsa('.step'); if(!steps.length) return;
+    const total = steps.length;
+    state.step = Math.max(1, Math.min(total, n));
+    steps.forEach(s => s.classList.toggle('active', Number(s.dataset.step)===state.step));
+    qs('#bar').style.width = ((state.step-1)/(total-1))*100 + '%';
+    qs('#lvl').textContent = `Level ${state.step}/${total}`;
+    const p = document.querySelector('.progress');
+    if(p){ p.setAttribute('aria-valuenow', String(state.step)); }
+    const live = document.getElementById('a11yLive');
+    if(live){ live.textContent = 'Step ' + state.step + ' of ' + total; }
+    track('step_view', {step: state.step});
+    qs('#nextBtn').textContent = state.step===total ? 'Finish 🎉' : 'Next →';
+    qs('#prevBtn').disabled = state.step===1;
+    if(state.step===4) renderRail();
+    if(state.step===total){ renderSummary(); awardCompletion(); }
+    if(state.step===3){ renderCombo3(); renderNudge3(); }
+    highlightStepper();
+    persist();
+  }
+  function persist(){ localStorage.setItem('uc_brief_v42', JSON.stringify(state)); updateClarityUI(); }
+  function restore(){
+    try{ const raw = localStorage.getItem('uc_brief_v42'); if(!raw) return; Object.assign(state, JSON.parse(raw)); hydrate(); setStep(state.step); toast('Progress loaded'); }catch{}
+  }
+  function hydrate(){
+    markSelected('#vibeOptions', state.vibe);
+    markSelected('#kpiOptions', state.kpi);
+    renderCombo3();
+    renderEduKPI();
+    // Show or hide the basics button depending on whether an outcome was selected
+const eduBtnInit = qs('#edu2Toggle');
+if (eduBtnInit) eduBtnInit.style.display = state.kpi ? 'inline-flex' : 'none';
+
+// Curiosity button stays hidden until basics are shown
+const deepBtnInit = qs('#deep2Toggle');
+if (deepBtnInit) deepBtnInit.style.display = 'none';
+    
+    markSelected('#styleOptions', state.style);
+    markSelected('#audOptions', state.audience);
+    qs('#smtm').value = state.smtm||'';
+    qs('#refs').value = (state.refs||[]).join('\n');
+    qs('#audCustom').value = state.audCustom||'';
+    qs('#budget').value = state.budget||2; updateBudgetLabel();
+    qs('#deadline').value = state.deadline||'';
+    qs('#notes').value = state.notes||'';
+    qs('#email').value = state.email||'';
+    qs('#keyMsg').value = state.keyMsg||'';
+    renderChips('#channelChips', CHANNELS, state.channel, v=> state.channel=v);
+    renderChips('#ctaChips', CTAS, state.cta, v=> state.cta=v);
+    renderChipsMulti('#deliverableChips', DELIVERABLES, state.deliverables, arr=> state.deliverables=arr);
+    renderChipsMulti('#aspectChips', ASPECTS, state.aspects, arr=> { state.aspects = arr; loadPortfolio(); });
+    renderToppings();
+    if(state.vibe) updateMood(classFromVibe(state.vibe));
+    updateBadges();
+  }
+
+  function buildStepper(){
+    const nav = qs('#stepperNav'); if(!nav) return;
+    const steps = qsa('.step');
+    nav.innerHTML = '';
+    steps.forEach(s=>{
+      const n = Number(s.dataset.step);
+      const label = s.querySelector('.q')?.textContent?.replace(/\s*—.*$/, '') || `Step ${n}`;
+      const btn = document.createElement('button');
+      btn.type='button'; btn.className='stp'; btn.dataset.goto=String(n);
+      btn.innerHTML = `<span class="num">${n}</span><span>${label}</span>`;
+      btn.addEventListener('click', ()=> setStep(n));
+      nav.appendChild(btn);
+    });
+    highlightStepper();
+  }
+  function highlightStepper(){
+    qsa('#stepperNav .stp').forEach(b=> b.classList.toggle('active', Number(b.dataset.goto)===state.step));
+    const active = qs('#stepperNav .stp.active');
+    if(active) active.scrollIntoView({inline:'center', behavior:'smooth', block:'nearest'});
+  }
+
+  // Buttons
+  qs('#nextBtn').addEventListener('click', ()=>{ const max = qsa('.step').length; if(state.step<max) setStep(state.step+1); else toast('Scroll ready — export or share!'); });
+  qs('#prevBtn').addEventListener('click', ()=> setStep(state.step-1));
+  qs('#resetBtn').addEventListener('click', ()=>{ localStorage.removeItem('uc_brief_v42'); location.reload(); });
+  qs('#saveBtn').addEventListener('click', ()=>{ persist(); toast('Progress saved'); });
+  qs('#resumeBtn').addEventListener('click', restore);
+  // Clarity details toggle
+  const clarityBtn = document.getElementById('clarityDetails');
+  if(clarityBtn){
+    clarityBtn.addEventListener('click', ()=>{
+      const miss=document.getElementById('clarityMissing');
+      if(!miss) return;
+      miss.style.display = (miss.style.display==='none' || !miss.style.display) ? 'block' : 'none';
+    });
+  }
+
+  // Theme toggle (light/dark) for better readability during workshops
+  const THEME_KEY = 'uc_theme_v42';
+  function applyTheme(val){
+    document.body.classList.toggle('theme-light', val==='light');
+    localStorage.setItem(THEME_KEY, val);
+    const tbtn = qs('#themeToggle');
+    if(tbtn) tbtn.textContent = document.body.classList.contains('theme-light') ? '☀️ Light' : '🌙 Dark';
+  }
+  const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+  applyTheme(savedTheme);
+  const themeBtn = qs('#themeToggle');
+  if(themeBtn){ themeBtn.addEventListener('click', ()=> applyTheme(document.body.classList.contains('theme-light') ? 'dark' : 'light')); }
+
+  // Inputs
+  qs('#smtm').addEventListener('change', e=>{ state.smtm=e.target.value; persist(); });
+  qs('#refs').addEventListener('input', e=>{ state.refs = e.target.value.split(/\n+/).map(s=>s.trim()).filter(Boolean); persist(); });
+  qs('#audCustom').addEventListener('input', e=>{ state.audCustom=e.target.value; persist(); });
+  qs('#budget').addEventListener('input', e=>{ state.budget=Number(e.target.value); updateBudgetLabel(); persist(); });
+  qs('#deadline').addEventListener('change', e=>{ state.deadline=e.target.value; persist(); });
+  qs('#notes').addEventListener('input', e=>{ state.notes=e.target.value; persist(); });
+  qs('#email').addEventListener('input', e=>{ state.email=e.target.value; persist(); });
+  qs('#keyMsg').addEventListener('input', e=>{ state.keyMsg=e.target.value; persist(); });
+  const advToggle = qs('#advToggle'); const advInner = qs('#advInner');
+  advToggle.addEventListener('change', ()=>{ advInner.style.display = advToggle.checked ? 'block':'none'; });
+
+  function updateBudgetLabel(){
+    const map={1:'Small — Quick & Simple',2:'Medium — Balanced',3:'Big Bang — Full-Scale'};
+    qs('#budgetLabel').textContent = map[state.budget];
+  }
+
+  // Option groups
+  function bindGroup(id, setter, after){
+    const box = qs(id);
+    box.addEventListener('click', (e)=>{
+      const opt = e.target.closest('.opt'); if(!opt) return;
+      setter(opt.dataset.value);
+      markChildren(box, opt);
+      if(id==='#vibeOptions') updateMood(opt.dataset.mood);
+      persist(); if(after) after(opt.dataset.value);
+    });
+  }
+  function markChildren(box, target){ [...box.children].forEach(el=> el.classList.toggle('selected', el===target)); }
+  function markSelected(id, value){
+    const box = qs(id); if(!box) return;
+    [...box.children].forEach(el=> el.classList.toggle('selected', el.dataset.value===value));
+  }
+  function classFromVibe(v){ return v==='Fun & Playful'?'mood-fun':v==='Professional'?'mood-pro':v==='Mysterious & Dramatic'?'mood-myst':v==='Calm & Natural'?'mood-calm':''; }
+  function updateMood(c){ document.body.classList.remove('mood-fun','mood-pro','mood-myst','mood-calm'); if(c) document.body.classList.add(c); }
+
+  bindGroup('#vibeOptions', (v)=> { state.vibe=v; loadPortfolio(); renderCombo3(); });
+bindGroup('#kpiOptions', (v)=> {
+  state.kpi = v;
+  renderEduKPI();
+
+  const eduBtn = qs('#edu2Toggle');
+  const eduBox = qs('#edu2');
+  const deepBtn = qs('#deep2Toggle');
+  const deepBox = qs('#deep2');
+
+  // Always show the basics toggle once an outcome is chosen
+  if (eduBtn) eduBtn.style.display = 'inline-flex';
+
+  const basicsOpen = eduBox && eduBox.style.display === 'block';
+  const deepOpen = deepBox && deepBox.style.display === 'block';
+
+  if (basicsOpen) {
+    // Keep "Curious?" visible if basics are open
+    if (deepBtn) deepBtn.style.display = 'inline-flex';
+    // If deep panel is open, just refresh its content
+    if (deepOpen) renderDeepKPI();
+  } else {
+    // If basics are closed, hide deep UI and close the panel
+    if (deepBtn) {
+      deepBtn.style.display = 'none';
+      deepBtn.textContent = 'Curious? 🤔';
+    }
+    if (deepBox) deepBox.style.display = 'none';
+  }
+  renderCombo3();
+});
+  bindGroup('#styleOptions', (v)=> { state.style=v; renderEduStyle(); }, ()=> { loadPortfolio(); });
+  bindGroup('#audOptions', (v)=> state.audience=v);
+
+  // Chips
+  function renderChips(sel, items, selected, onPick){
+    const box = qs(sel); box.innerHTML='';
+    items.forEach(v=>{
+      const s=document.createElement('span'); s.className='chip'+(selected===v?' sel':''); s.textContent=v;
+      s.addEventListener('click', ()=>{ [...box.children].forEach(c=>c.classList.remove('sel')); s.classList.add('sel'); onPick(v); persist(); });
+      box.appendChild(s);
+    });
+  }
+  function renderChipsMulti(sel, items, selected=[], onChange){
+    const box = qs(sel); box.innerHTML='';
+    items.forEach(v=>{
+      const s=document.createElement('span'); const on=(selected||[]).includes(v);
+      s.className='chip'+(on?' sel':''); s.textContent=v;
+      s.addEventListener('click', ()=>{
+        const set=new Set(selected||[]); set.has(v)?set.delete(v):set.add(v);
+        selected=[...set]; onChange(selected); renderChipsMulti(sel, items, selected, onChange); persist();
+      });
+      box.appendChild(s);
+    });
+  }
+
+  // Toppings (rich cards w/ quotes + impact badges)
+  const IMPACT_ICONS = {'Engaging↑':'⚡','CTR↑':'➡️','Wow↑':'✨','Masterful↑':'🎯','Original↑':'🧪','Share↑':'🔁','Reach↑':'📣','Performance↑':'📈','Trust↑':'🤝','Speed↑':'🏃‍♀️','Accessibility↑':'♿'};
+  const TOPPINGS=[
+    {id:'anim_sprinkles', emo:'✨', label:'Animation Sprinkles', desc:'Add light motion graphics, logo stingers, or fun transitions.', copy:'“Want us to sprinkle some motion magic on top?”', impact:['Wow↑','Masterful↑','Engaging↑']},
+    {id:'music_sauce', emo:'🎶', label:'Music Sauce', desc:'Original soundtrack, licensed tracks, or sound design.', copy:'“Choose your sauce — spicy beats, chill vibes, or cinematic strings?”', impact:['Masterful↑','Wow↑']},
+    {id:'voiceover_garnish', emo:'🎙️', label:'Voiceover Garnish', desc:'Professional voice, AI-generated voice, or bilingual voices.', copy:'“Would you like a tasty voice to guide your story?”', impact:['Trust↑','Accessibility↑']},
+    {id:'subtitle_seasoning', emo:'📝', label:'Subtitle Seasoning', desc:'Thai, English, or multi-language captions.', copy:'“Extra flavor for global audiences.”', impact:['Reach↑','Accessibility↑']},
+    {id:'bts_spice', emo:'🎥', label:'Behind-the-Scenes Spice', desc:'BTS footage / mini-doc about the making.', copy:'“A pinch of BTS spice — make your audience part of the kitchen.”', impact:['Original↑','Share↑','Trust↑']},
+    {id:'social_serving', emo:'📱', label:'Social Media Serving', desc:'Cutdowns: TikTok/IG Reels versions.', copy:'“Want side dishes for socials?”', impact:['Reach↑','Engaging↑']},
+    {id:'ai_magic', emo:'✨', label:'AI Magic Dust', desc:'AI-driven variations: alternate edits, instant draft copy, AI artwork.', copy:'“Add a dash of AI magic for fresh flavors.”', impact:['Speed↑','Original↑']},
+    {id:'premium_plating', emo:'🍽️', label:'Premium Plating', desc:'Polished cinematic grade, color grading, cinematic LUTs.', copy:'“Serve it on fine china: cinematic polish for extra wow.”', impact:['Masterful↑','Wow↑']}
+  ];
+  function renderToppings(){
+    const box = qs('#extraOptions'); box.innerHTML='';
+    TOPPINGS.forEach(t=>{
+      const el=document.createElement('div'); el.className='opt'; el.innerHTML=`
+        <div class="emo">${t.emo}</div>
+        <div>
+          <div class="txt"><strong>${t.label}</strong></div>
+          <div class="muted">${t.desc}</div>
+          <div class="muted" style="opacity:.85; font-style:italic; margin-top:4px">${t.copy}</div>
+          <div class="impact">${t.impact.map(i => `<span class="chip badge">${(IMPACT_ICONS[i]||'')} ${i}</span>`).join('')}</div>
+        </div>`;
+      if(state.extras.includes(t.id)) el.classList.add('selected');
+      el.addEventListener('click', ()=>{
+        const i=state.extras.indexOf(t.id);
+        if(i>=0){ state.extras.splice(i,1); el.classList.remove('selected'); }
+        else{ if(state.extras.length>=5){ toast('Up to 5 toppings — keep it lean'); return; } state.extras.push(t.id); el.classList.add('selected'); }
+        persist();
+      });
+      box.appendChild(el);
+    });
+  }
+
+  // Portfolio rail (JSON loader + fallback demo)
+  const DEMO_PORTFOLIO=[
+    {id:'p1', title:'Beauty Cinematic Launch', vibes:['Mysterious & Dramatic','Professional'], styles:['Cinematic'], industries:['Beauty'], vtr:0.72, length:'00:30', link:'#'},
+    {id:'p2', title:'Startup Reel Ads Sprint', vibes:['Fun & Playful','Professional'], styles:['TikTok Snappy'], industries:['Tech'], vtr:0.61, length:'00:15', link:'#'},
+    {id:'p3', title:'Resort Nature Story', vibes:['Calm & Natural'], styles:['Documentary'], industries:['Hospitality'], vtr:0.69, length:'01:00', link:'#'},
+    {id:'p4', title:'Art Fashion Loop', vibes:['Artistic','Mysterious & Dramatic'], styles:['Artistic'], industries:['Fashion'], vtr:0.66, length:'00:20', link:'#'}
+  ];
+  window.PORTFOLIO = [];
+  let railShown = 3; const RAIL_STEP = 3; const RAIL_MAX = 9;
+  window._railExtraFilter = {industry:null, tag:null, industries:[], substyles:[]};
+  window._lastPoolLen = 0;
+
+  async function loadPortfolio(){
+    // 1) If Supabase client is available, fetch from DB (read-only)
+    if (window.supabase && window.SUPABASE_TABLE) {
+      try {
+        let query = window.supabase
+          .from(window.SUPABASE_TABLE)
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(60);
+        // Step 4 is exploratory; ignore Step 1–3 filters here
+        if (state.style) query = query.contains('styles', [state.style]);
+        const { data, error } = await query;
+        if (error) throw error;
+        if (Array.isArray(data)) {
+          window.PORTFOLIO = data;
+          renderRail();
+          return;
+        }
+      } catch (e) {
+        console.warn('[Brief] Supabase fetch failed, fallback to local JSON.', e);
+      }
+    }
+
+    // 2) Fallback to local JSON file if present
+    try {
+      const res = await fetch('assets/data/portfolio.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const items = await res.json();
+      window.PORTFOLIO = Array.isArray(items) ? items : [];
+      renderRail();
+      return;
+    } catch (e) {
+      console.warn('[Brief] Local JSON not found, using demo portfolio.', e);
+    }
+
+    // 3) Final fallback: in-file demo
+    window.PORTFOLIO = DEMO_PORTFOLIO;
+    renderRail();
+  }
+
+  // Build a thumbnail from many possible fields or derive from link (YouTube/Vimeo)
+  function deriveThumb(it){
+    const cand = it.thumbnail || it.thumbnail_url || it.thumb || it.thumb_url || it.cover || it.cover_url || it.image || it.poster;
+    if (cand) return cand;
+    const link = it.link || '';
+    try {
+      const u = new URL(link);
+      const host = u.hostname || '';
+      if (host.includes('youtu.be') || host.includes('youtube.com')){
+        const id = host.includes('youtu.be') ? u.pathname.slice(1) : (u.searchParams.get('v') || '').split(/[?&#]/)[0];
+        if (id) return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+      }
+      if (host.includes('vimeo.com')){
+        const id = u.pathname.split('/').filter(Boolean)[0];
+        if (id) return `https://vumbnail.com/${id}.jpg`;
+      }
+    } catch(e){}
+    return '';
+  }
+  function normalizeItem(it){
+    return {
+      title: it.title || '',
+      link: it.link || '#',
+      thumbnail: deriveThumb(it),
+      vtr: typeof it.vtr==='number'? it.vtr : undefined,
+      len: it.len || it.length || '',
+      moods: it.moods || it.vibes || [],
+      styles: it.styles || [],
+      substyles: it.substyles || it.sub_styles || [],
+      aspects: it.aspect_ratios || it.aspects || [],
+      industries: it.industries || it.industry || []
+    };
+  }
+
+  // Add a portfolio item's link into the Reference links textarea/state
+  function addRefLink(url){
+    if(!url || url === '#'){ toast('No link available'); return; }
+    const txt = qs('#refs');
+    const list = Array.isArray(state.refs) ? state.refs.slice() : [];
+    if(list.includes(url)){ toast('Already in Reference links'); return; }
+    list.push(url);
+    state.refs = list;
+    if(txt){
+      const current = (txt.value || '').trim();
+      txt.value = current ? (current + '\n' + url) : url;
+    }
+    persist();
+    toast('Added to Reference links');
+  }
+
+  function renderRail(){
+    const rail=qs('#railCards'); if(!rail) return; rail.innerHTML='';
+    const fb = qs('#railFilterBar');
+    const src = (window.PORTFOLIO && window.PORTFOLIO.length)? window.PORTFOLIO : DEMO_PORTFOLIO;
+    const items = src.map(normalizeItem);
+    railShown = 3;
+    const pool = items.filter(p=>{
+      const vibeOk = true; // Step 4 is for exploration; ignore Step 1 vibe
+      const styleOk = state.style ? (p.styles||[]).includes(state.style) : true; // keep Step 4 style if chosen
+      const aspectOk = true; // Ignore Step 3 format/aspect here
+      const industryOk = window._railExtraFilter.industry ? (p.industries||[]).includes(window._railExtraFilter.industry) : true;
+      const indsOk = (window._railExtraFilter.industries && window._railExtraFilter.industries.length)
+        ? (p.industries||[]).some(a => window._railExtraFilter.industries.includes(a)) : true;
+      const subsOk = (window._railExtraFilter.substyles && window._railExtraFilter.substyles.length)
+        ? (p.substyles||[]).some(a => window._railExtraFilter.substyles.includes(a)) : true;
+      const tagOk = window._railExtraFilter.tag ? (p.tags||[]).includes(window._railExtraFilter.tag) : true;
+      return vibeOk && styleOk && aspectOk && industryOk && indsOk && subsOk && tagOk;
+    });
+
+    window._lastPoolLen = pool.length;
+
+    // Filter bar
+    if(fb){
+      const parts=[];
+      // aspect chips removed from filter bar
+      if(state.style){ parts.push({t:'style', v:state.style}); }
+      if(window._railExtraFilter.industry){ parts.push({t:'industry', v:window._railExtraFilter.industry}); }
+      (window._railExtraFilter.industries||[]).forEach(v=>parts.push({t:'industry_multi', v}));
+      (window._railExtraFilter.substyles||[]).forEach(v=>parts.push({t:'substyle', v}));
+      if(window._railExtraFilter.tag){ parts.push({t:'tag', v:window._railExtraFilter.tag}); }
+      if(parts.length){
+        fb.style.display='flex';
+        fb.innerHTML = `<span class="muted">Filters:</span> ` +
+          parts.map(c=>`<span class="chip badge chip-click" data-chip-type="${c.t}" data-chip-value="${c.v}">${c.v}</span>`).join(' ')+
+          ` <button type="button" class="btn ghost" id="clearRailFilters">Clear</button>`;
+      }else{ fb.style.display='none'; fb.innerHTML=''; }
+    }
+
+    const moreBtn = qs('#moreRail');
+    const shuffleBtn = qs('#shuffleRail');
+
+    if(pool.length===0){
+      if(moreBtn) moreBtn.style.display='none';
+      if(shuffleBtn) shuffleBtn.style.display='none';
+      rail.innerHTML = `
+        <div class="card" style="padding:16px; text-align:center">
+          <div class="muted">No matches found for your filters.</div>
+          <div class="row" style="justify-content:center; margin-top:10px">
+            <button type="button" class="btn ghost" id="clearStyleBtn">Clear Style</button>
+          </div>
+        </div>`;
+      const cs = qs('#clearStyleBtn'); if(cs){ cs.addEventListener('click', ()=>{ state.style=''; markSelected('#styleOptions', state.style); renderRail(); persist(); }); }
+      const clr = qs('#clearRailFilters'); if(clr){ clr.addEventListener('click', ()=>{ window._railExtraFilter={industry:null, tag:null, industries:[], substyles:[]}; state.style=''; markSelected('#styleOptions', state.style); persist(); renderRail(); }); }
+      return;
+    }
+
+    if(moreBtn){
+      const maxShown = Math.min(RAIL_MAX, pool.length);
+      moreBtn.style.display = pool.length > 3 ? 'inline-flex' : 'none';
+      moreBtn.textContent = railShown >= maxShown ? 'View less' : 'View more';
+    }
+    if(shuffleBtn){ shuffleBtn.style.display = pool.length > 1 ? 'inline-flex' : 'none'; }
+
+    const shown = Math.min(railShown, pool.length);
+    const picks = pool.sort(()=>Math.random()-0.5).slice(0, shown);
+
+    picks.forEach(p=>{
+      const card=document.createElement('div'); card.className='card'; card.style.padding='8px';
+      const vtrChip = (typeof p.vtr==='number') ? `<span class="chip badge">${Math.round(p.vtr*100)}% VTR</span>` : '';
+      const chipObjs=[];
+      // aspect chips removed from card
+      if((p.industries||[]).length) chipObjs.push({t:'industry', v:p.industries[0]});
+      if((p.styles||[]).length) chipObjs.push({t:'style', v:p.styles[0]});
+      if((p.tags||[]).length) chipObjs.push({t:'tag', v:p.tags[0]});
+      const meta = [p.len, (p.styles||[]).join('/'), (p.industries||[]).join(', ')].filter(Boolean).join(' • ');
+      card.innerHTML=`
+        <div style="height:120px; border-radius:10px; overflow:hidden; background:#0f111a">
+          ${p.thumbnail
+            ? `<img src="${p.thumbnail}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                     style="width:100%; height:100%; object-fit:cover" />`
+            : ``}
+          <div style="height:100%; display:${p.thumbnail ? 'none':'block'};
+                      background:repeating-linear-gradient(45deg,
+                        rgba(255,255,255,.06), rgba(255,255,255,.06) 10px,
+                        rgba(255,255,255,.03) 10px, rgba(255,255,255,.03) 20px);"></div>
+        </div>
+        <div style="padding:8px 6px; display:flex; justify-content:space-between; gap:6px; align-items:center">
+          <strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${p.title}</strong>
+          ${vtrChip}
+        </div>
+        <div class="muted" style="padding:0 6px 4px">${meta || '&nbsp;'}</div>
+        <div class="row" style="padding:0 6px 6px; gap:6px; align-items:center">${chipObjs.map(c=>`<span class="chip badge chip-click" data-chip-type="${c.t}" data-chip-value="${c.v}">${c.v}</span>`).join('')}</div>
+        <div class="rail-actions" style="display:flex; justify-content:flex-end; gap:8px; padding:0 6px 8px">
+          <button type="button" class="btn ghost rail-select" title="Add to Reference links">Select</button>
+          ${(()=>{ const utm=`utm_source=brief&utm_medium=rail&utm_campaign=vibe-${encodeURIComponent(state.vibe||'any')}_style-${encodeURIComponent(state.style||'any')}`; const href=(p.link && p.link!=='#') ? (p.link + (p.link.includes('?')?'&':'?') + utm) : '#'; return `<a class="btn ghost rail-open" href="${href}" target="_blank" rel="noopener" tabindex="0">Open</a>`; })()}
+        </div>`;
+
+      const actions = card.querySelector('.rail-actions');
+      const selBtn = card.querySelector('.rail-select');
+      const hasLink = !!(p.link && p.link !== '#');
+      if(selBtn){
+        if(hasLink){ selBtn.addEventListener('click', ()=> addRefLink(p.link)); }
+        else{ selBtn.disabled = true; selBtn.title = 'No link available'; }
+      }
+      rail.appendChild(card);
+      const a = card.querySelector('a.rail-open');
+      if(a){ a.addEventListener('click', ()=> track('rail_open', {id: p.id || p.title || 'item'})); }
+    });
+
+    // chip click handlers (rail + filter bar)
+    qsa('#railCards [data-chip-type], #railFilterBar [data-chip-type]').forEach(el=>{
+      el.style.cursor='pointer';
+      el.addEventListener('click', ()=>{
+        const t = el.getAttribute('data-chip-type'); const v = el.getAttribute('data-chip-value');
+        if(t==='style'){
+          state.style=v; markSelected('#styleOptions', state.style); renderRail();
+        }else if(t==='industry'){
+          window._railExtraFilter.industry=v; renderRail();
+        }else if(t==='industry_multi'){
+          const set=new Set(window._railExtraFilter.industries||[]);
+          if(set.has(v)) set.delete(v); else set.add(v);
+          window._railExtraFilter.industries=[...set]; renderRail();
+        }else if(t==='substyle'){
+          const set=new Set(window._railExtraFilter.substyles||[]);
+          if(set.has(v)) set.delete(v); else set.add(v);
+          window._railExtraFilter.substyles=[...set]; renderRail();
+        }else if(t==='tag'){
+          window._railExtraFilter.tag=v; renderRail();
+        }
+        persist(); toast(`Filtered by ${t}: ${v}`);
+      });
+    });
+
+    const clr = qs('#clearRailFilters'); if(clr){
+      clr.addEventListener('click', ()=>{
+        window._railExtraFilter={industry:null, tag:null, industries:[], substyles:[]};
+        state.style='';
+        markSelected('#styleOptions', state.style);
+        persist(); renderRail();
+      });
+    }
+  }
+  qs('#shuffleRail').addEventListener('click', ()=>{ renderRail(); toast('Shuffled'); });
+  qs('#moreRail').addEventListener('click', ()=>{
+    const maxShown = Math.min(RAIL_MAX, window._lastPoolLen || RAIL_MAX);
+    railShown = (railShown >= maxShown) ? 3 : Math.min(maxShown, railShown + RAIL_STEP);
+    renderRail();
+  });
+
+  // Summary + export
+  function normalizeRef(url){
+    try{ const u=new URL(url);
+      if(/(youtube\.com|youtu\.be)/.test(u.hostname)){ const id=u.hostname.includes('youtu.be')?u.pathname.slice(1):(u.searchParams.get('v')||''); return {url,provider:'youtube',id}; }
+      if(u.hostname.includes('vimeo.com')){ const id=u.pathname.split('/').filter(Boolean)[0]; return {url,provider:'vimeo',id}; }
+      if(/(drive\.google\.com|dropbox\.com)/.test(u.hostname)){ return {url,provider:'drive',id:u.pathname.split('/').pop()}; }
+      return {url,provider:'other',id:null};
+    }catch{return {url,provider:'invalid',id:null};}
+  }
+  function renderSummaryData(data){
+    const out=qs('#scroll');
+    out.innerHTML = Object.entries(data).map(([k,v])=>{
+      if(k==='references'){
+        const html = (v||[]).map(r=> `<div>${(r.provider||'') || ''} — <a href="${r.url}" target="_blank" rel="noopener">${r.url}</a></div>`).join('');
+        return `<div class="kv"><div>${k.replaceAll('_',' ')}</div><div>${html || '<span class="muted">—</span>'}</div></div>`;
+      }
+      return `<div class="kv"><div>${k.replaceAll('_',' ')}</div><div>${Array.isArray(v) ? (v.length? v.join(', '): '<span class="muted">—</span>') : (v || '<span class="muted">—</span>')}</div></div>`;
+    }).join('');
+  }
+  function renderSummary(){
+    const map={1:'Small — Quick & Simple',2:'Medium — Balanced',3:'Big Bang — Full-Scale'};
+    const extrasLabels = (state.extras||[]).map(id => { const t = TOPPINGS.find(x=>x.id===id); return t ? `${t.emo} ${t.label}` : id; });
+    const data={
+      project_vibe: state.vibe,
+      goal_kpi: state.kpi,
+      single_metric_that_matters: state.smtm || undefined,
+      primary_channel: state.channel || undefined,
+      primary_cta: state.cta || undefined,
+      style: state.style,
+      references: (state.refs||[]).map(normalizeRef),
+      audience: state.audience==='Custom' ? (state.audCustom || 'Custom') : state.audience,
+      audience_notes: state.audCustom || undefined,
+      budget_tier: map[state.budget],
+      launch_by: state.deadline || undefined,
+      deliverables: state.deliverables.length ? state.deliverables : ['Video'],
+      aspect_ratios_selected: state.aspects && state.aspects.length ? state.aspects : undefined,
+      key_message: state.keyMsg || undefined,
+      creative_toppings_selected: extrasLabels,
+      extra_notes: state.notes || undefined,
+      email: state.email || undefined,
+      badges: state.badges,
+      created_at: new Date().toISOString()
+    };
+    window.__brief_export__ = data;
+    renderSummaryData(data);
+  }
+  function copyJSON(){
+    const s = JSON.stringify(window.__brief_export__||{}, null, 2);
+    if(navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(s).then(()=> toast('JSON copied')).catch(()=> openCopyModal(s));
+    }else{ openCopyModal(s); }
+  }
+  function openCopyModal(text){
+    const modal=qs('#copyModal'); const area=qs('#copyArea'); area.value=text; modal.style.display='flex'; area.focus(); area.select();
+  }
+  function closeCopy(){ qs('#copyModal').style.display='none'; }
+
+  // --- Soft email gate ---
+  function openGate(){ const m=qs('#gateModal'); const inp=qs('#gateEmail'); if(inp){ inp.value=state.email||''; } m.style.display='flex'; if(inp) inp.focus(); }
+  function closeGate(){ qs('#gateModal').style.display='none'; }
+  function ensureEmailGate(thenFn){
+    if(state.email || localStorage.getItem('uc_gate_done')==='1'){ thenFn(); return; }
+    openGate();
+    const handle = (submit)=>{
+      const email = (qs('#gateEmail')?.value||'').trim();
+      if(submit && email){ state.email=email; persist(); track('email_submit',{domain:(email.split('@')[1]||'')}); }
+      localStorage.setItem('uc_gate_done','1');
+      closeGate(); thenFn();
+    };
+    qs('#gateSend').onclick = ()=> handle(true);
+    qs('#gateSkip').onclick = ()=> handle(false);
+  }
+
+  // --- Share link (encodes summary as base64 in URL) ---
+  function shareLink(){
+    if(!window.__brief_export__) renderSummary();
+    try{
+      const s = JSON.stringify(window.__brief_export__||{});
+      const b = btoa(unescape(encodeURIComponent(s)));
+      const url = location.origin + location.pathname + '?b=' + encodeURIComponent(b);
+      if(navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(url).then(()=> toast('Share link copied')).catch(()=> openCopyModal(url));
+      }else{ openCopyModal(url); }
+      track('share_link');
+    }catch(e){ console.warn('shareLink failed', e); }
+  }
+  function getParam(name){ try{ return new URL(location.href).searchParams.get(name); }catch{ return null; } }
+  function tryLoadShared(){
+    const b = getParam('b'); if(!b) return false;
+    try{
+      const json = decodeURIComponent(escape(atob(b)));
+      const data = JSON.parse(json);
+      window.__brief_export__ = data;
+      const total = qsa('.step').length; setStep(total);
+      renderSummaryData(data);
+      toast('Loaded shared brief');
+      return true;
+    }catch(e){ console.warn('Invalid share link', e); return false; }
+  }
+
+  qs('#copyJson').addEventListener('click', ()=> ensureEmailGate(()=>{ track('copy_json'); copyJSON(); }));
+  qs('#closeCopy').addEventListener('click', closeCopy);
+  qs('#downloadJson').addEventListener('click', ()=> ensureEmailGate(()=>{
+    track('download_json');
+    const s = JSON.stringify(window.__brief_export__||{}, null, 2);
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'application/json'})); a.download='undercat_brief.json'; a.click();
+  }));
+  qs('#shareLink').addEventListener('click', ()=> ensureEmailGate(shareLink));
+  qs('#printPdf').addEventListener('click', ()=> ensureEmailGate(()=>{ track('export_pdf'); window.print(); }));
+  function updateBadges(){
+    const wrap = qs('#badgeWrap'); if(!wrap) return;
+    wrap.innerHTML = (state.badges||[]).map(b=>`<span class="chip badge">🏅 ${b}</span>`).join(' ');
+  }
+  function awardCompletion(){
+    if(!state.badges.includes('Brief Complete')) state.badges.push('Brief Complete');
+    updateBadges(); persist();
+  }
+
+  // Data for chips
+  const SUBSTYLES=['Testimonial','Founder talk','Product demo','Tutorial/How-to','Montage','UGC','Motion-graphic','Stop-motion','3D/CGI','Documentary short'];
+  const INDUSTRIES=['Beauty','Tech','Hospitality','F&B','Finance','Education','Auto','Healthcare'];
+  const CHANNELS=["YouTube","Instagram Reels","TikTok","LinkedIn","Website","In-store","Other"];
+  const CTAS=["Visit site","Book demo","Add to cart","Get quote","Subscribe","Follow","Other"];
+  const DELIVERABLES=["Video","Motion Graphic","Graphic Design","Studio Photos"];
+  const ASPECTS=["9:16 Vertical","1:1 Square","16:9 Landscape"];
+  // --- Inline filter drawer (Sub-style + Industry) ---
+  function renderInlineFilterChoices(){
+    const sbox=qs('#filterSubstyleInline'); const ibox=qs('#filterIndustryInline'); if(!sbox||!ibox) return;
+    sbox.innerHTML=''; ibox.innerHTML='';
+    const sset=new Set(window._railExtraFilter.substyles||[]);
+    const iset=new Set(window._railExtraFilter.industries||[]);
+    SUBSTYLES.forEach(v=>{
+      const el=document.createElement('span'); el.className='chip'+(sset.has(v)?' sel':''); el.textContent=v;
+      el.addEventListener('click',()=>{
+        const set=new Set(window._railExtraFilter.substyles||[]);
+        set.has(v)? set.delete(v) : set.add(v);
+        window._railExtraFilter.substyles=[...set];
+        el.classList.toggle('sel');
+        persist(); renderRail();
+      });
+      sbox.appendChild(el);
+    });
+    INDUSTRIES.forEach(v=>{
+      const el=document.createElement('span'); el.className='chip'+(iset.has(v)?' sel':''); el.textContent=v;
+      el.addEventListener('click',()=>{
+        const set=new Set(window._railExtraFilter.industries||[]);
+        set.has(v)? set.delete(v) : set.add(v);
+        window._railExtraFilter.industries=[...set];
+        el.classList.toggle('sel');
+        persist(); renderRail();
+      });
+      ibox.appendChild(el);
+    });
+  }
+  function toggleInlineFilter(){
+    const box=qs('#filterInline'); if(!box) return;
+    const show = !(box.style.display==='block');
+    box.style.display = show ? 'block' : 'none';
+    if(show) renderInlineFilterChoices();
+  }
+  function resetInlineFilter(){
+    window._railExtraFilter.substyles=[]; window._railExtraFilter.industries=[];
+    persist(); renderInlineFilterChoices(); renderRail();
+  }
+  const openBtn=qs('#openFilters'); if(openBtn) openBtn.addEventListener('click', toggleInlineFilter);
+  const resetBtnInline=qs('#filterResetInline'); if(resetBtnInline) resetBtnInline.addEventListener('click', resetInlineFilter);
+  // === Step 2: Education & Deeper Dive (minimal) ===
+const EDU_KPI={
+  'Brand Awareness':{
+    why:'If people don’t know you, nothing else converts. Awareness plants the seed for future demand.',
+    service:['Design scroll‑stopping openings','Front‑load brand/logo in the first 3 seconds','Adapt formats for reach campaigns (vertical, captions)'],
+    tip:'Faces + brand in the first frame boosts recall and watch‑through. Repetition beats variety for memory.',
+    metrics:['Impressions','Reach','VTR','Ad recall lift']
+  },
+  'Drive Sales':{
+    why:'Clear offers and frictionless journeys drive real revenue.',
+    service:['Craft a single sharp CTA','Surface price/promo/value in the first seconds','Align creative with the landing page flow'],
+    tip:'Clarity beats cleverness — don’t bury the offer. Put it front and center with the CTA.',
+    metrics:['CTR','Conversion rate','CPA','ROAS']
+  },
+  'Build Trust':{
+    why:'Trust lowers hesitation for high‑consideration purchases.',
+    service:['Capture testimonials and real user proof','Show demos/outcomes with specifics, not slogans','Keep tone human and credible'],
+    tip:'Numbers + real faces outperform generic claims every time.',
+    metrics:['Time on page','Saves/Shares','Lead quality']
+  },
+  'Launch Hype':{
+    why:'Launch windows are short and noisy — you need a spike of attention.',
+    service:['Teaser → Reveal → CTA sequencing','Countdowns or scarcity where appropriate','Integrate creators/partners for network effects'],
+    tip:'Use urgency (“be the first”, limited time) to drive stronger engagement.',
+    metrics:['Social mentions','Search lift','Waitlist signups']
+  }
+};
+
+function renderEduKPI(){
+  const box = document.querySelector('#edu2'); if(!box) return;
+  const k = EDU_KPI[state.kpi];
+  if(!k){ box.innerHTML=''; return; }
+  const svc = Array.isArray(k.service) ? k.service : [];
+  box.innerHTML = `<div class="why">Why this matters:</div> ${k.why}
+    <div class="why" style="margin-top:6px">How we help:</div>
+    <ul>${svc.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <div class="pro" style="margin-top:6px">Creative tip: ${k.tip||''}</div>
+    <div class="popnote" style="margin-top:4px">Metrics: ${k.metrics.join(', ')}</div>`;
+}
+
+const KPI_DEEP={
+  'Brand Awareness':[
+    {name:'Impressions',desc:'Total ad displays. Measures exposure, not attention.',ex:'Use to model reach at top of funnel.'},
+    {name:'Reach',desc:'Unique people who saw your ad. Avoids double-counting.',ex:'Good when growing new audiences.'},
+    {name:'VTR',desc:'View-Through Rate: % who watched past X sec or to end.',ex:'Use 3s/25%/50%/100% to spot drop-offs.'},
+    {name:'Ad recall lift',desc:'Survey-based lift in ability to remember your ad.',ex:'Requires brand-lift study on major platforms.'}
+  ],
+  'Drive Sales':[
+    {name:'CTR',desc:'Click-Through Rate = clicks ÷ impressions.',ex:'~1% social is common; 3%+ strong.'},
+    {name:'Conversion rate',desc:'% of visitors who complete desired action.',ex:'Offer + landing friction dominate.'},
+    {name:'CPA',desc:'Cost per acquisition (lead/sale).',ex:'Compare across audiences/creatives.'},
+    {name:'ROAS',desc:'Return on ad spend = revenue ÷ ad spend.',ex:'Watch incrementality & attribution model.'}
+  ],
+  'Build Trust':[
+    {name:'Time on page',desc:'Average time spent with your content.',ex:'Longer can indicate depth/interest.'},
+    {name:'Saves / Shares',desc:'Signals content value & advocacy.',ex:'Great proxy for resonance in social.'},
+    {name:'Lead quality',desc:'Downstream fit/close rates.',ex:'Align with sales on “qualified”.'}
+  ],
+  'Launch Hype':[
+    {name:'Social mentions',desc:'Organic volume of brand/topic mentions.',ex:'Separate volume vs sentiment.'},
+    {name:'Search lift',desc:'Increase in branded search volume.',ex:'Compare against baseline around launch.'},
+    {name:'Waitlist signups',desc:'Opt-ins for release.',ex:'Best when there is a fixed reveal date.'}
+  ]
+};
+
+function renderDeepKPI(){
+  const box = document.querySelector('#deep2'); if(!box) return;
+  const data = KPI_DEEP[state.kpi]||[];
+  box.innerHTML = data.length
+    ? `<div class="grid">${data.map(m=>`
+        <div class="metric-card">
+          <div class="name">${m.name}</div>
+          <div class="muted">${m.desc}</div>
+          <div class="popnote" style="margin-top:6px">Example: ${m.ex}</div>
+        </div>`).join('')}</div>`
+    : '<div class="muted">Pick an outcome to see metric details.</div>';
+}
+
+// Wire the Step 2 toggle button once
+(function(){
+  const btn = document.querySelector('#deep2Toggle');
+  const box = document.querySelector('#deep2');
+  if(btn && box){
+    btn.addEventListener('click', ()=>{
+      const isOpen = box.style.display==='block';
+      if(isOpen){ box.style.display='none'; btn.textContent='Curious? 🤔'; }
+      else{ renderDeepKPI(); box.style.display='block'; btn.textContent='Hide nerd mode'; }
+    });
+  }
+})();
+
+// Wire the Step 2 EDU basics toggle
+// Wire the Step 2 EDU basics toggle
+(function(){
+  const btn = document.querySelector('#edu2Toggle');
+  const box = document.querySelector('#edu2');
+  if(btn && box){
+    btn.addEventListener('click', ()=>{
+      const isOpen = box.style.display==='block';
+      if(isOpen){
+        // Close basics
+        box.style.display='none';
+        btn.textContent='See why';
+        // Also hide the Curious button and close the deep panel
+        const deepBtn = document.querySelector('#deep2Toggle');
+        const deepBox = document.querySelector('#deep2');
+        if(deepBtn){ deepBtn.style.display='none'; deepBtn.textContent='Curious? 🤔'; }
+        if(deepBox){ deepBox.style.display='none'; }
+      } else {
+        // Open basics
+        renderEduKPI();
+        box.style.display='block';
+        btn.textContent='Hide basics';
+        const deepBtn = document.querySelector('#deep2Toggle');
+        if(deepBtn) deepBtn.style.display='inline-flex';
+      }
+    });
+  }
+})();
+
+  // --- Education content (inline helper copy) ---
+  const EDU={
+    kpi:{
+      'Brand Awareness':{
+        why:'If people don’t know you, nothing else converts. Awareness plants the seed for future demand.',
+        service:['Design scroll‑stopping openings','Front‑load brand/logo in the first 3 seconds','Adapt formats for reach campaigns (vertical, captions)'],
+        tip:'Faces + brand in the first frame boosts recall and watch‑through. Repetition beats variety for memory.',
+        metrics:'Impressions, Reach, <span class="gloss" title="View-Through Rate: percent who watched past X sec or to end.">VTR</span>, Ad recall lift'
+      },
+      'Drive Sales':{
+        why:'Clear offers and frictionless journeys drive real revenue.',
+        service:['Craft a single sharp CTA','Surface price/promo/value in the first seconds','Align creative with the landing page flow'],
+        tip:'Clarity beats cleverness — don’t bury the offer. Put it front and center with the CTA.',
+        metrics:'<span class="gloss" title="Click-Through Rate: clicks divided by impressions.">CTR</span>, Conversion rate, CPA, <span class="gloss" title="Return on Ad Spend: revenue ÷ ad spend.">ROAS</span>'
+      },
+      'Build Trust':{
+        why:'Trust lowers hesitation for high‑consideration purchases.',
+        service:['Capture testimonials and real user proof','Show demos/outcomes with specifics, not slogans','Keep tone human and credible'],
+        tip:'Numbers + real faces outperform generic claims every time.',
+        metrics:'Time on page, Saves/Shares, Lead quality'
+      },
+      'Launch Hype':{
+        why:'Launch windows are short and noisy — you need a spike of attention.',
+        service:['Teaser → Reveal → CTA sequencing','Countdowns or scarcity where appropriate','Integrate creators/partners for network effects'],
+        tip:'Use urgency (“be the first”, limited time) to drive stronger engagement.',
+        metrics:'Social mentions, Search lift, Waitlist signups'
+      }
+    },
+    channel:`<div class="why">Why this matters:</div> Pacing, framing, and captions depend on where it lives first.
+      <ul>
+        <li><strong>YouTube</strong>: longer story; add a mid-roll hook.</li>
+        <li><strong>Instagram Reels</strong>: front-load brand in 1–2s; always captions.</li>
+        <li><strong>TikTok</strong>: native/lo-fi wins; pattern-interrupt in first second.</li>
+        <li><strong>LinkedIn</strong>: B2B authority; stats and outcomes.</li>
+      </ul>
+      <div class="pro">Pro tip: match CTA to intent — “Book demo” (fewer clicks, higher intent) vs “Visit site” (discovery).</div>`,
+    style:{
+      'Cinematic':'Premium, slower pacing. Great for trust/premium positioning.',
+      'TikTok Snappy':'Jump cuts, text on screen. Great for performance/UGC.',
+      'Artistic':'Metaphor and distinctive visuals. Great for brand memory.',
+      'Documentary':'Interviews + proof. Great for complex/high-consideration.'
+    },
+    audience:`<div class="why">Why this matters:</div> Message changes by stage.
+      <ul>
+        <li><strong>Cold</strong>: hook with problem + social proof fast.</li>
+        <li><strong>Warm</strong>: show differentiation + offer.</li>
+        <li><strong>Hot</strong>: remove risk (guarantees, easy returns).</li>
+      </ul>`,
+    budget:`<div class="why">Why this matters:</div> Scope decides output quality & quantity.
+      <ul>
+        <li><strong>Small</strong>: one hero asset; nail one channel.</li>
+        <li><strong>Medium</strong>: core video + cutdowns/variants.</li>
+        <li><strong>Large</strong>: multi-concept + testing; expect iteration.</li>
+      </ul>`,
+    toppings:`<div class="why">Impact → KPI</div>
+      <ul>
+        <li><strong>Subtitles</strong>: accessibility/retention → higher <span class="gloss" title="View-Through Rate: percent who watched past X sec or to end.">VTR</span>.</li>
+        <li><strong>BTS/Story</strong>: authenticity → saves/shares.</li>
+        <li><strong>Voiceover</strong>: clarity in sound-off feeds.</li>
+        <li><strong>AI variations</strong>: faster testing/learning.</li>
+      </ul>`
+  };
+
+  function renderEduKPI(){
+    const box=qs('#edu2'); if(!box) return;
+    if(!state.kpi){ box.innerHTML=''; return; }
+    const k=EDU.kpi[state.kpi];
+    if(!k){ box.innerHTML=''; return; }
+    const svc = Array.isArray(k.service) ? k.service : [];
+    box.innerHTML = `<div class="why">Why this matters:</div> ${k.why}
+      <div class="why" style="margin-top:6px">How we help:</div>
+      <ul>${svc.map(x=>`<li>${x}</li>`).join('')}</ul>
+      <div class="pro" style="margin-top:6px">Creative tip: ${k.tip||''}</div>
+      <div class="popnote" style="margin-top:4px">Metrics: ${k.metrics}</div>`;
+  }
+  function renderEduChannel(){ const b=qs('#edu3'); if(!b) return; b.innerHTML = EDU.channel; }
+  function renderEduStyle(){ const b=qs('#edu4'); if(!b) return; if(!state.style){ b.innerHTML=''; return;} b.textContent = EDU.style[state.style]||''; }
+  function renderEduAudience(){ const b=qs('#edu5'); if(!b) return; b.innerHTML = EDU.audience; }
+  function renderEduBudget(){ const b=qs('#edu6'); if(!b) return; b.innerHTML = EDU.budget; }
+  function renderEduToppings(){ const b=qs('#edu7'); if(!b) return; b.innerHTML = EDU.toppings; }
+  function renderEduAll(){ renderEduKPI(); renderEduChannel(); renderEduStyle(); renderEduAudience(); renderEduBudget(); renderEduToppings(); }
+
+  renderChips('#channelChips', CHANNELS, '', v=> state.channel=v);
+  renderChips('#ctaChips', CTAS, '', v=> state.cta=v);
+  renderChipsMulti('#deliverableChips', DELIVERABLES, [], arr=> state.deliverables=arr);
+  renderChipsMulti('#aspectChips', ASPECTS, [], arr=> { state.aspects = arr; loadPortfolio(); });
+  renderToppings();
+  renderEduAll();
+  buildStepper();
+  if(!tryLoadShared()){ setStep(1); }
+  loadPortfolio();
+  updateClarityUI();
+
+  // Keyboard nav
+  window.addEventListener('keydown', (e)=>{
+    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+    if(e.key==='ArrowRight') qs('#nextBtn').click();
+    if(e.key==='ArrowLeft') qs('#prevBtn').click();
+  });
+  // --- Step 3 Nudge System (inside IIFE) ---
+  // NUDGE[vibe][kpi] = [variant1, variant2, ...]
+  const NUDGE = {
+    "Fun & Playful": {
+      "Brand Awareness": [
+        "🎉 Playful moments break the scroll. Where would someone smile at you first—TikTok or Reels?",
+        "✨ Bright colors + quick hooks often spark awareness. Could Reels or TikTok be your opening stage?"
+      ],
+      "Drive Sales": [
+        "💸 Energy sells when the offer is clear. Which stage makes your CTA feel natural—Reels or your site?",
+        "🎯 Playful demo + obvious button. Would Reels hand off smoothly to a checkout?"
+      ],
+      "Build Trust": [
+        "🤝 Humor with real faces disarms doubt. Where could a quick testimonial land softly—Stories or a short YouTube?",
+        "🧸 Light, human clips build comfort. Would a friendly behind‑the‑scenes fit here?"
+      ],
+      "Launch Hype": [
+        "🚀 Trends + countdowns spark buzz. Where would your reveal ripple fastest—TikTok, Reels, or both?",
+        "🎊 Teasers and surprise reveals earn FOMO. Which feed would catch the first wave?"
+      ]
+    },
+    "Professional": {
+      "Brand Awareness": [
+        "🕴️ Polished first impressions linger. Would a clean intro travel farther on YouTube or LinkedIn?",
+        "💼 Crisp visuals + clear headline. Which stage suits a confident brand moment?"
+      ],
+      "Drive Sales": [
+        "📈 Clarity + proof move action. Is ‘Book demo’ stronger on LinkedIn or a focused landing page?",
+        "💸 Short demo, sharp benefits. Which channel would make the handoff feel seamless?"
+      ],
+      "Build Trust": [
+        "🤝 Authority calms hesitation. Where could stats and outcomes feel right—LinkedIn feed or concise YouTube?",
+        "🔒 Proof points + human tone. Which space feels credible to your buyer?"
+      ],
+      "Launch Hype": [
+        "🚀 A sleek teaser can spark curiosity. Which stage suits a sharp reveal—YouTube Premiere or LinkedIn post?",
+        "🗓️ Milestones build anticipation. Where would your timeline get noticed?"
+      ]
+    },
+    "Mysterious & Dramatic": {
+      "Brand Awareness": [
+        "🌌 Intrigue opens doors. Would a slow reveal catch more eyes on YouTube or Reels?",
+        "🕶️ Tease logo or message before the reveal. Which stage rewards suspense?"
+      ],
+      "Drive Sales": [
+        "🎭 Drama draws them in; clarity closes. Where could a cinematic hook hand off to a simple CTA?",
+        "💸 Reveal the offer at the peak moment. Which platform sets up that turn?"
+      ],
+      "Build Trust": [
+        "🎬 Real voices with cinematic depth build belief. Would a founder clip or user quote ground the story?",
+        "🤝 Mood + authenticity can coexist. Which stage lets both breathe?"
+      ],
+      "Launch Hype": [
+        "🌑 Tension loves a countdown. Where should the first shadow drop—YouTube, then social cutdowns?",
+        "🚀 Clues first, then the reveal. Which feed would the trail work best in?"
+      ]
+    },
+    "Calm & Natural": {
+      "Brand Awareness": [
+        "🌿 Gentle stories invite curiosity. Would a quiet moment travel better in Reels or YouTube Shorts?",
+        "🧘 Soft light, real moments. Which stage lets calm stand out?"
+      ],
+      "Drive Sales": [
+        "🍃 Soft offers convert without push. Where could ‘Add to cart’ feel honest—site after a short Reel, or native shop?",
+        "💸 Clarity with warmth. Which channel makes the next step obvious, not loud?"
+      ],
+      "Build Trust": [
+        "🌱 Real people in real settings build confidence. Is a calm testimonial better on LinkedIn or YouTube?",
+        "🤝 Let the work breathe. Which space feels natural for proof?"
+      ],
+      "Launch Hype": [
+        "🌅 Even launches can be serene. Where would a grounded reveal feel true—YouTube first, then Reels recaps?",
+        "✨ Quiet anticipation can cut through noise. Which stage holds attention gently?"
+      ]
+    }
+  };
+
+  function renderNudge3(){
+    const box = qs('#nudge3'); if(!box) return;
+    const vibe = state.vibe; const kpi = state.kpi;
+    if(!vibe || !kpi || !NUDGE[vibe] || !NUDGE[vibe][kpi]){ box.innerHTML=''; return; }
+    const variants = NUDGE[vibe][kpi];
+    const key = `uc_nudge3_idx_${vibe}_${kpi}`;
+    let idx = 0; try{ idx = parseInt(localStorage.getItem(key),10); if(isNaN(idx)||idx<0||idx>=variants.length) idx=0; }catch{}
+    const text = variants[idx];
+    box.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px">
+        <span style="flex:1">${text}</span>
+        <button type="button" id="nudge3Shuffle" class="btn ghost" title="Shuffle idea">🔄</button>
+        <button type="button" id="nudge3AddNote" class="btn ghost" title="Add to notes">📝 Add note</button>
+      </div>`;
+    const shuffleBtn = qs('#nudge3Shuffle');
+    if(shuffleBtn){ shuffleBtn.onclick = ()=>{ const next=(idx+1)%variants.length; localStorage.setItem(key, String(next)); renderNudge3(); toast('New idea'); }; }
+    const addBtn = qs('#nudge3AddNote');
+    if(addBtn){ addBtn.onclick = ()=>{ const note=`[Step 3 note] ${text}`; state.notes = (state.notes? state.notes+"\n" : "") + note; try{ qs('#notes').value = state.notes; }catch{} persist(); toast('Added to notes'); }; }
+  }
+})();</script>
+</body>
+</html>
