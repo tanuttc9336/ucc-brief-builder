@@ -79,6 +79,16 @@
   .opt.modern.selected{outline:2px solid var(--accent); box-shadow:0 0 0 4px rgba(91,33,182,.18) inset}
   .opt.modern .preview{height:120px; width:100%}
   .opt.modern .content{display:flex; align-items:center; gap:10px; padding:12px 14px}
+  /* Inline persona panel for Step 1 */
+.opt.modern.expanded{ outline:2px solid var(--accent); box-shadow:0 0 0 4px rgba(109,40,217,.12) inset }
+.opt.modern .persona-inline{
+  margin:8px 12px 12px; border:1px dashed var(--border); border-radius:12px;
+  background:var(--surface-2); padding:10px; overflow:hidden;
+  max-height:0; opacity:0; transition:max-height .25s ease, opacity .25s ease;
+}
+.opt.modern.expanded .persona-inline{ max-height:280px; opacity:1 }
+.persona-head{ display:flex; justify-content:space-between; align-items:center; gap:8px }
+.persona-count{ font-size:.9rem; color:var(--muted) }
   .preview.vibe-fun{background:linear-gradient(135deg, rgba(255,184,28,.55), rgba(255,77,109,.45))}
   .preview.vibe-pro{background:linear-gradient(135deg, rgba(59,130,246,.55), rgba(14,165,233,.45))}
   .preview.vibe-myst{background:linear-gradient(135deg, rgba(91,33,182,.65), rgba(124,58,237,.45))}
@@ -179,8 +189,8 @@
 
     <div class="flow" id="flow">
       <section class="step active" data-step="1">
-        <h3 class="q">Step 1 — Pick the vibe</h3>
-        <div class="muted" style="margin:-2px 0 10px">We’ll tailor examples and tone based on your selection.</div>
+        <h3 class="q">Step 1 — If your brand were a person, what’s the vibe?</h3>
+        <div class="muted" style="margin:-2px 0 10px">Pick the overall feeling. Then add 2–3 traits to sketch the persona.</div>
         <div class="vibe-grid" id="vibeOptions">
           <div class="opt modern" data-value="Fun & Playful" data-mood="mood-fun">
             <div class="preview vibe-fun"></div>
@@ -197,6 +207,21 @@
           <div class="opt modern" data-value="Calm & Natural" data-mood="mood-calm">
             <div class="preview vibe-calm"></div>
             <div class="content"><div class="emo">🌿</div><div><div class="title-sm">Calm & Natural</div><div class="muted">Soft light, space to breathe.</div></div></div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px; display:none">
+  <button type="button" class="btn ghost" id="personaToggle">Brand as a person?</button>
+</div>
+        <div id="personaPalette" class="card" style="display:none; padding:12px; margin:8px 0">
+          <div class="muted">If your brand were a person, what would they be like? <strong>Pick up to 3 traits.</strong></div>
+          <div class="row" id="traitChips" style="margin-top:8px"></div>
+          <div class="row" style="justify-content:space-between; align-items:center; margin-top:8px">
+            <div class="muted" style="font-size:.9rem">You can skip this anytime.</div>
+            <div class="row">
+              <button type="button" class="btn ghost" id="personaShuffle">🔄 Surprise me</button>
+              <button type="button" class="btn ghost" id="personaContrast">⚖️ Add contrast</button>
+              <button type="button" class="btn ghost" id="personaAddNote">📝 Add note</button>
+            </div>
           </div>
         </div>
       </section>
@@ -443,7 +468,7 @@
   const toast = (msg)=>{ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1200); };
   const qs = (sel)=> document.querySelector(sel);
   const qsa = (sel)=> [...document.querySelectorAll(sel)];
-  const state = {step:1,vibe:'',kpi:'',smtm:'',channel:'',cta:'',style:'',refs:[],audience:'',audCustom:'',budget:2,deadline:'',extras:[],notes:'',email:'',keyMsg:'',deliverables:[],aspects:[],badges:[]};
+  const state = {step:1,vibe:'',kpi:'',smtm:'',channel:'',cta:'',style:'',refs:[],audience:'',audCustom:'',budget:2,deadline:'',extras:[],notes:'',email:'',keyMsg:'',deliverables:[],aspects:[],persona_traits:[],badges:[]};
   // --- Clarity score ---
   function computeClarity(s){
     let score=0; const missing=[];
@@ -508,6 +533,9 @@
   }
   function hydrate(){
     markSelected('#vibeOptions', state.vibe);
+        // Show inline traits under selected vibe (if any)
+    const selectedVibeEl = document.querySelector('#vibeOptions .opt.selected');
+    if(selectedVibeEl){ openPersonaInlineFor(selectedVibeEl); }
     markSelected('#kpiOptions', state.kpi);
     renderCombo3();
     renderEduKPI();
@@ -588,6 +616,18 @@ if (deepBtnInit) deepBtnInit.style.display = 'none';
   const themeBtn = qs('#themeToggle');
   if(themeBtn){ themeBtn.addEventListener('click', ()=> applyTheme(document.body.classList.contains('theme-light') ? 'dark' : 'light')); }
 
+  // Step 1 — Persona Palette toggle (HTML-first; chips wired later)
+  const personaToggle = qs('#personaToggle');
+if (personaToggle) {
+  personaToggle.addEventListener('click', () => {
+    const box = qs('#personaPalette');
+    if (!box) return;
+    const open = box.style.display === 'block';
+    box.style.display = open ? 'none' : 'block';
+    if (!open) { renderTraits(); } // ensure chips show on first open
+  });
+}
+
   // Inputs
   qs('#smtm').addEventListener('change', e=>{ state.smtm=e.target.value; persist(); });
   qs('#refs').addEventListener('input', e=>{ state.refs = e.target.value.split(/\n+/).map(s=>s.trim()).filter(Boolean); persist(); });
@@ -607,15 +647,15 @@ if (deepBtnInit) deepBtnInit.style.display = 'none';
 
   // Option groups
   function bindGroup(id, setter, after){
-    const box = qs(id);
-    box.addEventListener('click', (e)=>{
-      const opt = e.target.closest('.opt'); if(!opt) return;
-      setter(opt.dataset.value);
-      markChildren(box, opt);
-      if(id==='#vibeOptions') updateMood(opt.dataset.mood);
-      persist(); if(after) after(opt.dataset.value);
-    });
-  }
+  const box = qs(id);
+  box.addEventListener('click', (e)=>{
+    const opt = e.target.closest('.opt'); if(!opt) return;
+    setter(opt.dataset.value);
+    markChildren(box, opt);
+    if(id==='#vibeOptions') updateMood(opt.dataset.mood);
+    persist(); if(after) after(opt.dataset.value, opt); // pass element too
+  });
+}
   function markChildren(box, target){ [...box.children].forEach(el=> el.classList.toggle('selected', el===target)); }
   function markSelected(id, value){
     const box = qs(id); if(!box) return;
@@ -624,7 +664,7 @@ if (deepBtnInit) deepBtnInit.style.display = 'none';
   function classFromVibe(v){ return v==='Fun & Playful'?'mood-fun':v==='Professional'?'mood-pro':v==='Mysterious & Dramatic'?'mood-myst':v==='Calm & Natural'?'mood-calm':''; }
   function updateMood(c){ document.body.classList.remove('mood-fun','mood-pro','mood-myst','mood-calm'); if(c) document.body.classList.add(c); }
 
-  bindGroup('#vibeOptions', (v)=> { state.vibe=v; loadPortfolio(); renderCombo3(); });
+  bindGroup('#vibeOptions', (v)=> { state.vibe=v; loadPortfolio(); renderCombo3(); renderTraits(); }, (v, el)=> { openPersonaInlineFor(el); });
 bindGroup('#kpiOptions', (v)=> {
   state.kpi = v;
   renderEduKPI();
@@ -1081,7 +1121,7 @@ bindGroup('#kpiOptions', (v)=> {
   }
   function awardCompletion(){
     if(!state.badges.includes('Brief Complete')) state.badges.push('Brief Complete');
-    updateBadges(); persist();
+    updateBadges(); persist();renderTraits();
   }
 
   // Data for chips
@@ -1091,6 +1131,193 @@ bindGroup('#kpiOptions', (v)=> {
   const CTAS=["Visit site","Book demo","Add to cart","Get quote","Subscribe","Follow","Other"];
   const DELIVERABLES=["Video","Motion Graphic","Graphic Design","Studio Photos"];
   const ASPECTS=["9:16 Vertical","1:1 Square","16:9 Landscape"];
+    // --- Step 1 Persona Traits (per vibe) ---
+  const MAX_TRAITS = 3;
+  const TRAITS = {
+    'Fun & Playful': ['Friendly','Witty','Energetic','Quirky','Colorful','Approachable','Spontaneous','Cheeky'],
+    'Professional': ['Confident','Precise','Reliable','Authoritative','Efficient','Polished','Expert','Minimal'],
+    'Mysterious & Dramatic': ['Confident','Sexy','Bold','Elegant','Minimal','Witty','Enigmatic','Premium','Cinematic'],
+    'Calm & Natural': ['Gentle','Honest','Warm','Organic','Grounded','Mindful','Simple','Balanced']
+  };
+  const CONTRAST_TRAITS = {
+    'Fun & Playful': ['Minimal','Calm'],
+    'Professional': ['Playful','Expressive'],
+    'Mysterious & Dramatic': ['Warm','Approachable','Simple'],
+    'Calm & Natural': ['Bold','Snappy']
+  };
+
+  function unique(arr){ return [...new Set(arr)]; }
+  function pickN(arr, n){ const a=[...arr]; const out=[]; while(a.length && out.length<n){ out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]); } return out; }
+
+  function getTraitPool(){
+    const v = state.vibe || 'Fun & Playful';
+    const base = TRAITS[v] || [];
+    const chosen = Array.isArray(state.persona_traits) ? state.persona_traits : [];
+    // keep chosen first in case they’re not in base list
+    const extras = chosen.filter(t => !base.includes(t));
+    return unique([...extras, ...base]);
+  }
+
+  function renderTraits(){
+    const box = qs('#traitChips'); if(!box) return;
+    const pool = getTraitPool();
+    const chosen = Array.isArray(state.persona_traits) ? state.persona_traits : [];
+    box.innerHTML = '';
+    pool.forEach(t => {
+      const el = document.createElement('span');
+      const on = chosen.includes(t);
+      el.className = 'chip' + (on ? ' sel' : '');
+      el.textContent = t;
+      el.tabIndex = 0;
+      el.addEventListener('click', () => toggleTrait(t));
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggleTrait(t); }});
+      box.appendChild(el);
+    });
+  }
+
+  function toggleTrait(t){
+    const set = new Set(Array.isArray(state.persona_traits) ? state.persona_traits : []);
+    if(set.has(t)) { set.delete(t); }
+    else {
+      if(set.size >= MAX_TRAITS){ toast(`Pick up to ${MAX_TRAITS} traits`); return; }
+      set.add(t);
+    }
+    state.persona_traits = [...set];
+    renderTraits();
+    persist();
+  }
+
+  // --- Inline Persona (Step 1) ---
+function updateInlinePersonaCount(){
+  const cntEls = document.querySelectorAll('.persona-count');
+  const n = (state.persona_traits||[]).length;
+  cntEls.forEach(el=> el.textContent = `${n}/${MAX_TRAITS}`);
+}
+
+function renderTraitsInto(targetEl){
+  if(!targetEl) return;
+  const pool = getTraitPool();
+  const chosen = Array.isArray(state.persona_traits) ? state.persona_traits : [];
+  targetEl.innerHTML = '';
+  pool.forEach(t => {
+    const el = document.createElement('span');
+    const on = chosen.includes(t);
+    el.className = 'chip' + (on ? ' sel' : '');
+    el.textContent = t;
+    el.tabIndex = 0;
+    const toggle = ()=>{ toggleTrait(t); renderTraitsInto(targetEl); updateInlinePersonaCount(); };
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggle(); }});
+    targetEl.appendChild(el);
+  });
+  updateInlinePersonaCount();
+}
+
+function wireInlinePersonaActions(scopeEl){
+  if(!scopeEl) return;
+  const chipsBox = scopeEl.querySelector('.traitChips-inline');
+  const btnShuffleIn = scopeEl.querySelector('.persona-shuffle');
+  const btnContrastIn = scopeEl.querySelector('.persona-contrast');
+  const btnNoteIn = scopeEl.querySelector('.persona-addnote');
+  const btnCollapse = scopeEl.querySelector('.persona-collapse');
+  if(btnShuffleIn){ btnShuffleIn.addEventListener('click', ()=>{
+    const pool = TRAITS[state.vibe] || [];
+    const chosen = Array.isArray(state.persona_traits) ? state.persona_traits.slice() : [];
+    const need = Math.max(0, MAX_TRAITS - chosen.length);
+    const candidates = pool.filter(t => !chosen.includes(t));
+    const picks = pickN(candidates, need);
+    state.persona_traits = unique([...chosen, ...picks]).slice(0, MAX_TRAITS);
+    renderTraitsInto(chipsBox); persist(); toast('New trait ideas');
+  }); }
+  if(btnContrastIn){ btnContrastIn.addEventListener('click', ()=>{
+    const pool = CONTRAST_TRAITS[state.vibe] || [];
+    const chosen = Array.isArray(state.persona_traits) ? state.persona_traits.slice() : [];
+    const need = Math.max(0, MAX_TRAITS - chosen.length);
+    const candidates = pool.filter(t => !chosen.includes(t));
+    const picks = pickN(candidates, Math.min(2, need));
+    state.persona_traits = unique([...chosen, ...picks]).slice(0, MAX_TRAITS);
+    renderTraitsInto(chipsBox); persist(); toast('Added a little contrast');
+  }); }
+  if(btnNoteIn){ btnNoteIn.addEventListener('click', ()=>{
+    const list = (state.persona_traits||[]).join(', ') || '—';
+    const line = `[Persona] Traits: ${list}`;
+    state.notes = (state.notes ? state.notes + '\\n' : '') + line;
+    const notesBox = qs('#notes'); if(notesBox){ notesBox.value = state.notes; }
+    persist(); toast('Added to notes');
+  }); }
+  if(btnCollapse){ btnCollapse.addEventListener('click', ()=>{ scopeEl.classList.remove('expanded'); }); }
+}
+
+function openPersonaInlineFor(optEl){
+  if(!optEl) return;
+  // Close others
+  document.querySelectorAll('#vibeOptions .opt.modern.expanded').forEach(el=>{
+    if(el!==optEl){ el.classList.remove('expanded'); const old=el.querySelector('.persona-inline'); if(old) old.remove(); }
+  });
+  // Create if needed
+  if(!optEl.classList.contains('expanded')){
+    optEl.classList.add('expanded');
+    const box = document.createElement('div');
+    box.className = 'persona-inline';
+    box.innerHTML = `
+      <div class="persona-head">
+        <div class="muted">Pick up to 3 traits</div>
+        <div class="persona-count">0/${MAX_TRAITS}</div>
+      </div>
+      <div class="row traitChips-inline" style="margin-top:8px"></div>
+      <div class="row" style="justify-content:space-between; align-items:center; margin-top:8px">
+        <div class="muted" style="font-size:.9rem">You can skip this anytime.</div>
+        <div class="row">
+          <button type="button" class="btn ghost persona-shuffle">🔄 Surprise me</button>
+          <button type="button" class="btn ghost persona-contrast">⚖️ Add contrast</button>
+          <button type="button" class="btn ghost persona-addnote">📝 Add note</button>
+          <button type="button" class="btn ghost persona-collapse">Collapse</button>
+        </div>
+      </div>`;
+    optEl.appendChild(box);
+    wireInlinePersonaActions(optEl);
+  }
+  const chipsBox = optEl.querySelector('.traitChips-inline');
+  renderTraitsInto(chipsBox);
+}
+
+  // Persona Palette buttons
+  const btnShuffle = qs('#personaShuffle');
+  if(btnShuffle){
+    btnShuffle.addEventListener('click', ()=>{
+      const pool = TRAITS[state.vibe] || [];
+      const chosen = Array.isArray(state.persona_traits) ? state.persona_traits.slice() : [];
+      const need = Math.max(0, MAX_TRAITS - chosen.length);
+      const candidates = pool.filter(t => !chosen.includes(t));
+      const picks = pickN(candidates, need);
+      state.persona_traits = unique([...chosen, ...picks]).slice(0, MAX_TRAITS);
+      renderTraits(); persist(); toast('New trait ideas');
+    });
+  }
+
+  const btnContrast = qs('#personaContrast');
+  if(btnContrast){
+    btnContrast.addEventListener('click', ()=>{
+      const pool = CONTRAST_TRAITS[state.vibe] || [];
+      const chosen = Array.isArray(state.persona_traits) ? state.persona_traits.slice() : [];
+      const need = Math.max(0, MAX_TRAITS - chosen.length);
+      const candidates = pool.filter(t => !chosen.includes(t));
+      const picks = pickN(candidates, Math.min(2, need));
+      state.persona_traits = unique([...chosen, ...picks]).slice(0, MAX_TRAITS);
+      renderTraits(); persist(); toast('Added a little contrast');
+    });
+  }
+
+  const btnAddNote = qs('#personaAddNote');
+  if(btnAddNote){
+    btnAddNote.addEventListener('click', ()=>{
+      const list = (state.persona_traits||[]).join(', ') || '—';
+      const line = `[Persona] Traits: ${list}`;
+      state.notes = (state.notes ? state.notes + '\\n' : '') + line;
+      const notesBox = qs('#notes'); if(notesBox){ notesBox.value = state.notes; }
+      persist(); toast('Added to notes');
+    });
+  }
   // --- Inline filter drawer (Sub-style + Industry) ---
   function renderInlineFilterChoices(){
     const sbox=qs('#filterSubstyleInline'); const ibox=qs('#filterIndustryInline'); if(!sbox||!ibox) return;
